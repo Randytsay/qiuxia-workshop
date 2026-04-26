@@ -533,10 +533,10 @@ function renderAll(date, category) {
     title: { ...titleStyle, text: '各小C參與人數 ' + totalStr, subtext, left: 'center', top: 0 },
     tooltip: { trigger: 'item', formatter: p => `${p.name}：${p.value}${unit}（${p.percent.toFixed(1)}%）` },
     series: [{
-      type: 'pie', radius: ['30%', '72%'], center: ['50%', '55%'], roseType: 'area',
+      type: 'pie', radius: ['28%', '68%'], center: ['50%', '55%'], roseType: 'area',
       data: stats.map((s, i) => ({ name: s.name, value: s.value, itemStyle: getItemStyle(i, 'rose') })),
       label: { show: true, formatter: function(p){ return p.name+'\n'+p.value+unit+'\n'+p.percent.toFixed(1)+'%'; }, fontSize: 10, lineHeight: 14, color: '#475569' },
-      labelLine: { length: 6, length2: 10 },
+      labelLine: { length: 12, length2: 20 },
       emphasis: { itemStyle: { shadowBlur: 14, shadowColor: 'rgba(0,0,0,0.25)' } },
     }],
   }, true);
