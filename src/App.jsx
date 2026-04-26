@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +13,9 @@ import {
 } from 'chart.js'
 import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { Bar, Line, Doughnut } from 'react-chartjs-2'
+import {
+  fetchDates, fetchAnalytics, fetchTrend, fetchComparison
+} from './dataService.js'
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement, PointElement,
@@ -542,8 +545,7 @@ export default function App() {
 
   // Load dates on mount
   useEffect(() => {
-    fetch('/api/dates')
-      .then(r => r.json())
+    fetchDates()
       .then(d => {
         if (d.dates?.length) {
           setDates(d.dates)
@@ -557,9 +559,7 @@ export default function App() {
   useEffect(() => {
     if (!selectedDate) return
     setLoadingSingle(true)
-    const normalized = selectedDate.split('/').map((p, i) => i === 1 || i === 2 ? String(parseInt(p)) : p).join('/')
-    fetch(`/api/analytics?date=${encodeURIComponent(normalized)}`)
-      .then(r => r.json())
+    fetchAnalytics(selectedDate)
       .then(d => { setSingleData(d); setLoadingSingle(false); })
       .catch(e => { console.error(e); setLoadingSingle(false); })
   }, [selectedDate])
@@ -571,8 +571,7 @@ export default function App() {
 
   function fetchComp(period) {
     setLoadingComp(true)
-    fetch(`/api/comparison?period=${period}`)
-      .then(r => r.json())
+    fetchComparison(period)
       .then(d => { setCompData(d); setLoadingComp(false); })
       .catch(e => { console.error(e); setLoadingComp(false); })
   }
@@ -580,8 +579,7 @@ export default function App() {
   function handleTrendQuery(start, end) {
     if (!start || !end) return
     setLoadingTrend(true)
-    fetch(`/api/trend?start=${start}&end=${end}`)
-      .then(r => r.json())
+    fetchTrend(start, end)
       .then(d => { setTrendData(d); setLoadingTrend(false); })
       .catch(e => { console.error(e); setLoadingTrend(false); })
   }
