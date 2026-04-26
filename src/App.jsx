@@ -229,7 +229,7 @@ export default function App() {
     }
   }, [filtered])
 
-  // 小C排行
+  // 小C參與排行
   const smallCData = useMemo(() => {
     const map = {}
     filtered.forEach(r => {
@@ -244,6 +244,25 @@ export default function App() {
         data: sorted.map(([, v]) => v),
         backgroundColor: 'rgba(99,102,241,0.7)',
         borderRadius: 6,
+      }]
+    }
+  }, [filtered])
+
+  // 小C人數佔比圖（甜甜圈）
+  const SMALLC_COLORS = ['#6366f1','#10b981','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#f97316','#84cc16','#0ea5e9','#fbbf24','#a78bfa','#34d399','#fb923c','#f472b6','#4ade80','#38bdf8']
+  const smallCDoughnutData = useMemo(() => {
+    const map = {}
+    filtered.forEach(r => {
+      const c = r['所屬小C'] || '未知'
+      map[c] = (map[c] || 0) + 1
+    })
+    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
+    return {
+      labels: sorted.map(([k]) => k),
+      datasets: [{
+        data: sorted.map(([, v]) => v),
+        backgroundColor: sorted.map(([_, i]) => SMALLC_COLORS[i % SMALLC_COLORS.length]),
+        borderWidth: 0,
       }]
     }
   }, [filtered])
@@ -445,10 +464,10 @@ export default function App() {
             </div>
           </div>
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-700 mb-4">⭐ 出席王 TOP10</h3>
+            <h3 className="font-semibold text-gray-700 mb-4">🏠 小C人數佔比</h3>
             <div className="h-52">
-              {topAttendeesData.labels.length > 0
-                ? <Bar data={topAttendeesData} options={chartOptions} />
+              {smallCDoughnutData.labels.length > 0
+                ? <Doughnut data={smallCDoughnutData} options={doughnutOptions} />
                 : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
             </div>
           </div>
