@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+*.log
+.git
+.vercel
+api/_stats.json

@@ -2,6 +2,15 @@ export default async function handler(req, res) {
   const SHEET_ID = '1QEytkFQTYVgkwCxgcC4BKrvf9ZkC_GApJd1U6JQAnsI'
   const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`
 
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate')
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
   try {
     const response = await fetch(CSV_URL, {
       headers: {
@@ -15,7 +24,6 @@ export default async function handler(req, res) {
 
     const text = await response.text()
 
-    // Parse CSV
     const parseCSVLine = (line) => {
       const result = []
       let current = ''
@@ -43,17 +51,15 @@ export default async function handler(req, res) {
       if (values.length >= headers.length) {
         const row = {}
         headers.forEach((h, idx) => {
-          row[h] = (values[idx] || '').trim().replace(/^\"|"$/g, '').replace(/\r$/, '')
+          row[h] = (values[idx] || '').trim().replace(/^"|"$/g, '').replace(/\r$/, '')
         })
         rows.push(row)
       }
     }
 
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate')
-    res.status(200).json({ data: rows, fetchedAt: new Date().toISOString() })
+    return res.status(200).json({ data: rows, fetchedAt: new Date().toISOString() })
   } catch (err) {
     console.error('API error:', err)
-    res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: err.message })
   }
 }
