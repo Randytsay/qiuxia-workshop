@@ -3,3 +3,4 @@ dist
 .DS_Store
 *.local
 index_react_backup.html
+node_modules/.package-lock.json

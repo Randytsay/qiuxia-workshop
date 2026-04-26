@@ -1,559 +1,649 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend,
-  ArcElement,
-  LineElement,
-  PointElement,
 } from 'chart.js'
-import { Bar, Doughnut, Line } from 'react-chartjs-2'
+import ChartDataLabels from 'chartjs-plugin-datalabels'
+import { Bar, Line, Doughnut } from 'react-chartjs-2'
 
 ChartJS.register(
-  CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
-  ArcElement, LineElement, PointElement
+  CategoryScale, LinearScale, BarElement, LineElement, PointElement,
+  ArcElement, Title, Tooltip, Legend, ChartDataLabels
 )
 
+const CHART_COLORS = [
+  '#3b82f6', '#ef4444', '#22c55e', '#f97316', '#8b5cf6',
+  '#ec4899', '#f59e0b', '#10b981', '#6366f1', '#d946ef',
+]
 
-const WORKSHOP_COLORS = {
-  '經營工作坊': '#6366f1',
-  '招募工作坊': '#f59e0b',
-  '領導工作坊': '#10b981',
-  '產品工作坊': '#ec4899',
-  'AI工作坊': '#8b5cf6',
-  '產品&AI工作坊': '#06b6d4',
-  '主題工作坊': '#f97316',
-  '主題式工作坊': '#f97316',
-  '讀書會': '#84cc16',
-  '聯合小C': '#0ea5e9',
-  '其他工作坊': '#64748b',
+// ─── Helpers ────────────────────────────────────────────────────
+function fmtDate(d) {
+  try {
+    const [y, mo, day] = d.split('/')
+    return `${y}年${parseInt(mo)}月${parseInt(day)}日`
+  } catch { return d }
 }
 
-const RANK_COLORS = {
-  'UFO超連鎖店主': '#fbbf24',
-  'SEC資深經理級': '#f59e0b',
-  'MC以上': '#ef4444',
-  'MC主管經理級': '#ec4899',
-  'EC經理級': '#8b5cf6',
-  'C助理級': '#6366f1',
+function fmtDateShort(d) {
+  try {
+    const parts = d.split('/')
+    return `${parseInt(parts[1])}/${parseInt(parts[2])}`
+  } catch { return d }
 }
 
-function parseCSV(text) {
-    const lines = text.trim().replace(/\r\n?/g, '\n').split('\n')
-    // Parse headers carefully - handle quoted commas
-    const headers = parseCSVLine(lines[0]).map(h => h.replace(/\r/g, ''))
-  const rows = []
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i])
-    if (values.length >= headers.length) {
-      const row = {}
-      headers.forEach((h, idx) => { row[h] = (values[idx] || '').trim().replace(/^"|"$/g, '').replace(/\r$/, '') })
-      rows.push(row)
-    }
-  }
-  return rows
+function fmtInputDate(d) {
+  const [y, mo, day] = d.split('/')
+  return `${y}-${String(mo).padStart(2,'0')}-${String(day).padStart(2,'0')}`
 }
 
-function parseCSVLine(line) {
-  const result = []
-  let current = ''
-  let inQuotes = false
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
-    if (char === '"') {
-      inQuotes = !inQuotes
-    } else if (char === ',' && !inQuotes) {
-      result.push(current)
-      current = ''
-    } else {
-      current += char
-    }
-  }
-  result.push(current)
-  return result
+function GrowthBadge({ rate }) {
+  if (rate === null || isNaN(rate)) return <span className="text-gray-400">—</span>
+  const color = rate >= 0 ? 'text-green-600' : 'text-red-500'
+  const icon = rate >= 0 ? '▲' : '▼'
+  return <span className={`font-bold ${color}`}>{icon} {Math.abs(rate).toFixed(1)}%</span>
 }
 
-function KPICard({ title, value, sub, color }) {
+// ─── Stat Card ─────────────────────────────────────────────────
+function StatCard({ label, value, primary, sub }) {
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-      <p className="text-sm text-gray-500 mb-1">{title}</p>
-      <p className="text-3xl font-bold" style={{ color }}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+    <div className={`rounded-2xl p-5 shadow-sm border ${primary
+      ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white'
+      : 'bg-white border-gray-100'}`}>
+      <p className={`text-sm mb-1 ${primary ? 'text-white/80' : 'text-gray-500'}`}>{label}</p>
+      <p className={`text-3xl font-extrabold ${primary ? '' : 'text-gray-800'}`}>{value ?? '—'}</p>
+      {sub && <p className={`text-xs mt-1 ${primary ? 'text-white/70' : 'text-gray-400'}`}>{sub}</p>}
     </div>
   )
 }
 
-function SelectFilter({ label, options, value, onChange }) {
+// ─── Tab Button ─────────────────────────────────────────────────
+function TabBtn({ id, label, icon, active, onClick }) {
   return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-gray-500">{label}</label>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-      >
-        <option value="">全部</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
+    <button
+      id={id}
+      onClick={onClick}
+      className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl text-sm font-medium transition-all min-h-[48px] ${
+        active
+          ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+          : 'text-slate-500 hover:bg-gray-100'
+      }`}
+    >
+      <span className="text-base">{icon}</span>
+      {label}
+    </button>
   )
 }
 
-export default function App() {
-  const [rawData, setRawData] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState(null)
-  const [latestDate, setLatestDate] = useState('')
-  const [filters, setFilters] = useState({
-    workshopType: '',
-    smallC: '',
-    rank: '',
-    role: '',
-    dateRange: '',  // 空字串 = 預設最新一場
-  })
+// ─── Single Meeting Tab ──────────────────────────────────────────
+function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
+  const barChartRef = useRef(null)
+  const [chartKey, setChartKey] = useState(0)
 
   useEffect(() => {
-    fetch('/api/data')
-      .then(r => r.json())
-      .then(json => {
-        if (json.data) {
-          setRawData(json.data)
-          setLastUpdated(new Date(json.fetchedAt).toLocaleString('zh-TW'))
-          // 抓最新一場工作坊日期
-          const dates = json.data.map(r => r['參與工作坊日期']).filter(Boolean)
-          if (dates.length > 0) {
-            const latest = dates.reduce((a, b) => new Date(a) > new Date(b) ? a : b)
-            setLatestDate(latest)
-            setFilters(f => ({ ...f, dateRange: latest }))
-          }
-        }
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error('Data load error:', err)
-        setLoading(false)
-      })
-  }, [])
+    if (data) setChartKey(k => k + 1)
+  }, [selectedDate])
 
-  const filtered = useMemo(() => {
-    return rawData.filter(row => {
-      if (filters.workshopType && row['請選擇這場工作坊的類別'] !== filters.workshopType) return false
-      if (filters.smallC && row['所屬小C'] !== filters.smallC) return false
-      if (filters.rank && row['目前聘階'] !== filters.rank) return false
-      if (filters.role && row['參與者身分'] !== filters.role) return false
-      if (filters.dateRange) {
-        const dateStr = row['參與工作坊日期']
-        if (!dateStr) return false
-        // 精確匹配日期（最新一場或多場選定）
-        if (dateStr !== filters.dateRange) return false
-      }
-      return true
-    })
-  }, [rawData, filters])
+  const sorted = data?.subGroupData
+    ? [...data.subGroupData].sort((a, b) => b.total - a.total)
+    : []
 
-  const workshopTypes = useMemo(() => {
-    const set = new Set(rawData.map(r => r['請選擇這場工作坊的類別']).filter(Boolean))
-    return Array.from(set).sort()
-  }, [rawData])
+  const barData = {
+    labels: sorted.map(g => g.name.length > 8 ? g.name.slice(0, 8) + '…' : g.name),
+    datasets: [
+      {
+        label: '夥伴',
+        data: sorted.map(g => g.partners),
+        backgroundColor: '#3b82f6',
+      },
+      {
+        label: '新朋友',
+        data: sorted.map(g => g.newFriends),
+        backgroundColor: '#a5b4fc',
+      },
+    ],
+  }
 
-  const smallCs = useMemo(() => {
-    const set = new Set(rawData.map(r => r['所屬小C']).filter(Boolean))
-    return Array.from(set).sort()
-  }, [rawData])
-
-  const ranks = useMemo(() => {
-    const set = new Set(rawData.map(r => r['目前聘階']).filter(Boolean))
-    return Array.from(set).sort()
-  }, [rawData])
-
-  const roles = useMemo(() => {
-    const set = new Set(rawData.map(r => r['參與者身分']).filter(Boolean))
-    return Array.from(set).sort()
-  }, [rawData])
-
-  // 所有可用日期（由新到舊排列）
-  const availableDates = useMemo(() => {
-    const set = new Set(rawData.map(r => r['參與工作坊日期']).filter(Boolean))
-    return Array.from(set).sort((a, b) => new Date(b) - new Date(a))
-  }, [rawData])
-
-  // KPIs
-  const totalRecords = filtered.length
-  const uniquePersons = new Set(filtered.map(r => r['夥伴姓'] + r['名字'])).size
-  const filteredWorkshopTypes = new Set(filtered.map(r => r['請選擇這場工作坊的類別']).filter(Boolean)).size
-  const filteredSmallC = new Set(filtered.map(r => r['所屬小C']).filter(Boolean)).size
-  const totalSessions = availableDates.length
-
-  // 月份趨勢
-  const monthlyData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const d = r['參與工作坊日期']
-      if (!d) return
-      const m = d.substring(0, 7)
-      map[m] = (map[m] || 0) + 1
-    })
-    const sorted = Object.keys(map).sort()
-    return {
-      labels: sorted,
-      datasets: [{
-        label: '參與人次',
-        data: sorted.map(k => map[k]),
-        backgroundColor: 'rgba(99,102,241,0.7)',
-        borderRadius: 6,
-      }]
-    }
-  }, [filtered])
-
-  // 工作坊類別
-  const workshopTypeData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const t = r['請選擇這場工作坊的類別'] || '未知'
-      map[t] = (map[t] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{
-        data: sorted.map(([, v]) => v),
-        backgroundColor: sorted.map(([k]) => WORKSHOP_COLORS[k] || '#94a3b8'),
-        borderWidth: 0,
-      }]
-    }
-  }, [filtered])
-
-  // 小C參與排行
-  const smallCData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const c = r['所屬小C'] || '未知'
-      map[c] = (map[c] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10)
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{
-        label: '參與人次',
-        data: sorted.map(([, v]) => v),
-        backgroundColor: 'rgba(99,102,241,0.7)',
-        borderRadius: 6,
-      }]
-    }
-  }, [filtered])
-
-  // 小C人數佔比圖（甜甜圈）
-  const SMALLC_COLORS = [
-    '#6366f1','#10b981','#f59e0b','#ec4899','#8b5cf6','#06b6d4',
-    '#f97316','#84cc16','#0ea5e9','#fbbf24','#a78bfa','#34d399',
-    '#fb923c','#f472b6','#4ade80','#38bdf8','#c084fc','#22d3ee',
-    '#facc15','#4ade80','#fb7185','#818cf8','#2dd4bf','#e879f9',
-    '#a3e635','#22d3d3','#fde047','#f9a8d4','#67e8f9','#d8b4fe',
-    '#86efac','#7dd3fc','#fcd34d','#f0abfc','#6ee7b7','#bae6fd',
-  ]
-  const smallCDoughnutData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const c = r['所屬小C'] || '未知'
-      map[c] = (map[c] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{
-        data: sorted.map(([, v]) => v),
-        backgroundColor: sorted.map(([, i]) => SMALLC_COLORS[i % SMALLC_COLORS.length]),
-        borderWidth: 0,
-      }]
-    }
-  }, [filtered])
-
-  // 出席王
-  const topAttendeesData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const name = (r['夥伴姓'] || '') + (r['名字'] || '')
-      if (!name) return
-      map[name] = (map[name] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10)
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{
-        label: '參加次數',
-        data: sorted.map(([, v]) => v),
-        backgroundColor: 'rgba(245,158,11,0.7)',
-        borderRadius: 6,
-      }]
-    }
-  }, [filtered])
-
-  // 職級分布
-  const rankData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const t = r['目前聘階'] || '未知'
-      map[t] = (map[t] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{
-        data: sorted.map(([, v]) => v),
-        backgroundColor: sorted.map(([k]) => RANK_COLORS[k] || '#94a3b8'),
-        borderWidth: 0,
-      }]
-    }
-  }, [filtered])
-
-  // 角色分布
-  const roleData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const t = r['參與者身分'] || '未知'
-      map[t] = (map[t] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{
-        data: sorted.map(([, v]) => v),
-        backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899'],
-        borderWidth: 0,
-      }]
-    }
-  }, [filtered])
-
-  // 最近場次
-  const recentSessions = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const d = r['參與工作坊日期']
-      const t = r['請選擇這場工作坊的類別'] || ''
-      if (!d) return
-      if (!map[d] || map[d].type !== t) {
-        map[d] = { date: d, type: t, count: 0, names: [] }
-      }
-      map[d].count++
-      const name = (r['夥伴姓'] || '') + (r['名字'] || '')
-      if (name) map[d].names.push(name)
-    })
-    return Object.values(map)
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, 10)
-  }, [filtered])
-
-  const chartOptions = {
+  const barOptions = {
+    indexAxis: 'y',
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'rect' } },
+      datalabels: {
+        color: '#fff',
+        font: { weight: 'bold', size: 11 },
+        anchor: 'center',
+        align: 'center',
+        formatter: v => v > 0 ? v : '',
+      },
+    },
     scales: {
-      y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } },
+      y: { stacked: true, grid: { display: false } },
+    },
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Date selector */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <label className="block text-sm font-semibold text-gray-600 mb-3">
+          📅 依簽到日期查詢
+        </label>
+        <select
+          value={selectedDate}
+          onChange={e => onDateChange(e.target.value)}
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="">— 選擇日期 —</option>
+          {(dates || []).map(d => (
+            <option key={d} value={d}>{fmtDate(d)}</option>
+          ))}
+        </select>
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-12 text-gray-400 gap-3">
+          <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          載入中…
+        </div>
+      )}
+
+      {data && !loading && (
+        <>
+          {/* KPI cards */}
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="👥 夥伴數" value={data.totalPartners} />
+            <StatCard label="🆕 新朋友數" value={data.totalNewFriends} />
+            <StatCard label="✨ 總出席" value={data.grandTotal} primary />
+          </div>
+
+          {/* Bar chart */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-600 mb-3">📊 各小C出席分佈</h3>
+            <div className="relative" style={{ height: Math.max(300, sorted.length * 52 + 80) }}>
+              <Bar key={chartKey} ref={barChartRef} data={barData} options={barOptions} />
+            </div>
+          </div>
+
+          {/* Details table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-700">📋 各小C出席詳情</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-600">小C名稱</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-600">夥伴</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-600">新朋友</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-600">總計</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {sorted.map((g, i) => (
+                    <tr key={i} className="hover:bg-blue-50/30 transition">
+                      <td className="px-4 py-3 font-medium text-gray-800">{g.name}</td>
+                      <td className="px-4 py-3 text-center">{g.partners}</td>
+                      <td className="px-4 py-3 text-center text-blue-600">{g.newFriends}</td>
+                      <td className="px-4 py-3 text-center font-bold">{g.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-blue-50 font-bold">
+                  <tr>
+                    <td className="px-4 py-3">合計</td>
+                    <td className="px-4 py-3 text-center">{data.totalPartners}</td>
+                    <td className="px-4 py-3 text-center text-blue-600">{data.totalNewFriends}</td>
+                    <td className="px-4 py-3 text-center text-blue-700">{data.grandTotal}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          {/* Attendee cards */}
+          {sorted.length > 0 && (
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-600 mb-4">👥 出席夥伴名單</h3>
+              <div className="space-y-4">
+                {sorted.map((g, i) => (
+                  <div key={i} className="border border-gray-100 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-bold text-gray-800">{g.name}</h4>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                        {g.attendees?.length || 0}人
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(g.attendees || []).map((a, j) => (
+                        <span
+                          key={j}
+                          className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                            a.type === 'friend'
+                              ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {a.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {!data && !loading && (
+        <div className="text-center py-16 text-gray-400">
+          <p className="text-4xl mb-3">📅</p>
+          <p>請選擇日期查看出席資料</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Trend Tab ─────────────────────────────────────────────────
+function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  useEffect(() => {
+    if (trendPeriod === 'thisMonth') {
+      const t = new Date()
+      const y = t.getFullYear(), m = t.getMonth()
+      setStartDate(`${y}-${String(m+1).padStart(2,'0')}-01`)
+      setEndDate(`${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`)
+    } else if (trendPeriod === 'lastMonth') {
+      const t = new Date()
+      const y = t.getFullYear(), m = t.getMonth() - 1
+      setStartDate(`${y}-${String(m+1).padStart(2,'0')}-01`)
+      setEndDate(`${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`)
+    } else if (trendPeriod === 'thisQuarter') {
+      const t = new Date()
+      const q = Math.floor(t.getMonth() / 3)
+      setStartDate(`${t.getFullYear()}-${String(q*3+1).padStart(2,'0')}-01`)
+      const eq = new Date(t.getFullYear(), q*3+3, 0)
+      setEndDate(`${eq.getFullYear()}-${String(eq.getMonth()+1).padStart(2,'0')}-${eq.getDate()}`)
     }
+  }, [trendPeriod])
+
+  const quickBtns = [
+    { id: 'thisMonth', label: '本月' },
+    { id: 'lastMonth', label: '上個月' },
+    { id: 'thisQuarter', label: '本季' },
+  ]
+
+  const lineData = data?.trendData ? {
+    labels: data.trendData.labels.map(fmtDateShort),
+    datasets: data.trendData.datasets.map((ds, i) => ({
+      label: ds.label,
+      data: ds.data,
+      borderColor: CHART_COLORS[i],
+      backgroundColor: CHART_COLORS[i] + '20',
+      tension: 0.3,
+      fill: i === 0,
+    })),
+  } : null
+
+  const lineOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { usePointStyle: true } },
+      datalabels: { display: false },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { beginAtZero: true },
+    },
+  }
+
+  const subGroupData = data?.trendData?.subGroupDatasets?.slice(0, 6) || []
+  const subLineData = {
+    labels: data?.trendData?.labels?.map(fmtDateShort) || [],
+    datasets: subGroupData.map((ds, i) => ({
+      label: ds.label,
+      data: ds.data,
+      borderColor: CHART_COLORS[i % CHART_COLORS.length],
+      backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + '15',
+      tension: 0.3,
+    })),
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Controls */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <label className="block text-sm font-semibold text-gray-600 mb-3">⚡ 快速選擇</label>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {quickBtns.map(b => (
+            <button
+              key={b.id}
+              onClick={() => onPeriodChange(b.id)}
+              className={`py-2.5 rounded-xl text-sm font-medium transition-all border ${
+                trendPeriod === b.id
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+              }`}
+            >
+              {b.label}
+            </button>
+          ))}
+        </div>
+        <label className="block text-sm font-semibold text-gray-600 mb-3">📆 或自訂區間</label>
+        <div className="space-y-2 mb-3">
+          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <button
+          onClick={() => onQuery(startDate, endDate)}
+          className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors"
+        >
+          🔍 查詢趨勢
+        </button>
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-12 text-gray-400 gap-3">
+          <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          載入中…
+        </div>
+      )}
+
+      {data && !loading && (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="👥 期間夥伴" value={data.analysis?.totalPartners} />
+            <StatCard label="🆕 期間新朋友" value={data.analysis?.totalNewFriends} />
+            <StatCard label="📈 總出席" value={data.analysis?.grandTotal} primary />
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-600 mb-3">📈 總出席人數趨勢</h3>
+            <div className="relative" style={{ height: 280 }}>
+              {lineData && <Line data={lineData} options={lineOptions} />}
+            </div>
+          </div>
+
+          {subGroupData.length > 0 && (
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-600 mb-3">📈 各小C出席趨勢</h3>
+              <div className="relative" style={{ height: 300 }}>
+                <Line data={subLineData} options={lineOptions} />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Comparison Tab ─────────────────────────────────────────────
+function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
+  const chartRef = useRef(null)
+
+  const doughnutData = data ? {
+    labels: ['夥伴', '新朋友'],
+    datasets: [{
+      data: [data.currentPeriod.totalPartners, data.currentPeriod.totalNewFriends],
+      backgroundColor: ['#3b82f6', '#a5b4fc'],
+      borderWidth: 2,
+      borderColor: '#fff',
+    }],
+  } : null
+
+  const compBarData = data ? {
+    labels: ['總人數', '夥伴', '新朋友'],
+    datasets: [
+      {
+        label: data.previousPeriod.label,
+        data: [data.previousPeriod.grandTotal, data.previousPeriod.totalPartners, data.previousPeriod.totalNewFriends],
+        backgroundColor: '#9ca3af',
+      },
+      {
+        label: data.currentPeriod.label,
+        data: [data.currentPeriod.grandTotal, data.currentPeriod.totalPartners, data.currentPeriod.totalNewFriends],
+        backgroundColor: '#3b82f6',
+      },
+    ],
+  } : null
+
+  const barOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top' },
+      datalabels: { display: false },
+    },
+    scales: { y: { beginAtZero: true } },
   }
 
   const doughnutOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        position: 'right',
-        labels: { boxWidth: 12, padding: 8, font: { size: 11 } }
-      }
-    }
+      legend: { position: 'bottom' },
+      datalabels: {
+        color: '#fff',
+        font: { weight: 'bold', size: 13 },
+        formatter: v => v > 0 ? v : '',
+      },
+    },
   }
 
-  const clearFilters = () => setFilters({ workshopType: '', smallC: '', rank: '', role: '', dateRange: latestDate || '' })
-  const hasActiveFilters = Object.values(filters).some(v => v !== '' && v !== latestDate)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-4xl mb-3">📊</div>
-          <p className="text-gray-500">正在載入 Google 試算表資料...</p>
-          <p className="text-xs text-gray-400 mt-1">自動抓取最新資料，每次刷新即更新</p>
+  return (
+    <div className="space-y-5">
+      {/* Period selector */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <label className="block text-sm font-semibold text-gray-600 mb-3">📊 選擇比較區間</label>
+        <div className="grid grid-cols-5 gap-2">
+          {[
+            { id: 'week', label: '週' },
+            { id: 'month', label: '月' },
+            { id: 'quarter', label: '季' },
+            { id: 'half', label: '半年' },
+            { id: 'year', label: '年' },
+          ].map(b => (
+            <button
+              key={b.id}
+              onClick={() => onPeriodChange(b.id)}
+              className={`py-2.5 rounded-xl text-sm font-medium transition-all border ${
+                activePeriod === b.id
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+              }`}
+            >
+              {b.label}比較
+            </button>
+          ))}
         </div>
       </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-12 text-gray-400 gap-3">
+          <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          載入中…
+        </div>
+      )}
+
+      {data && !loading && (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <p className="text-xs text-gray-500 mb-2">總出席人數</p>
+              <p className="text-2xl font-extrabold text-gray-800">{data.currentPeriod.grandTotal}</p>
+              <p className="text-xs text-gray-400 mt-1">{data.previousPeriod.label}: {data.previousPeriod.grandTotal}</p>
+              <div className="mt-1"><GrowthBadge rate={data.growthRates.grandTotal} /></div>
+            </div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <p className="text-xs text-gray-500 mb-2">夥伴人數</p>
+              <p className="text-2xl font-extrabold text-gray-800">{data.currentPeriod.totalPartners}</p>
+              <p className="text-xs text-gray-400 mt-1">{data.previousPeriod.label}: {data.previousPeriod.totalPartners}</p>
+              <div className="mt-1"><GrowthBadge rate={data.growthRates.partner} /></div>
+            </div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <p className="text-xs text-gray-500 mb-2">新朋友人數</p>
+              <p className="text-2xl font-extrabold text-gray-800">{data.currentPeriod.totalNewFriends}</p>
+              <p className="text-xs text-gray-400 mt-1">{data.previousPeriod.label}: {data.previousPeriod.totalNewFriends}</p>
+              <div className="mt-1"><GrowthBadge rate={data.growthRates.newFriend} /></div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-600 mb-3">🥧 {data.currentPeriod.label} 組成</h3>
+              <div className="relative" style={{ height: 240 }}>
+                {doughnutData && <Doughnut ref={chartRef} data={doughnutData} options={doughnutOptions} />}
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-600 mb-3">📊 {data.currentPeriod.label} vs {data.previousPeriod.label}</h3>
+              <div className="relative" style={{ height: 240 }}>
+                {compBarData && <Bar data={compBarData} options={barOptions} />}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Main App ────────────────────────────────────────────────────
+export default function App() {
+  const [activeTab, setActiveTab] = useState('single')
+  const [dates, setDates] = useState([])
+  const [selectedDate, setSelectedDate] = useState('')
+  const [singleData, setSingleData] = useState(null)
+  const [trendData, setTrendData] = useState(null)
+  const [trendPeriod, setTrendPeriod] = useState('thisMonth')
+  const [compData, setCompData] = useState(null)
+  const [compPeriod, setCompPeriod] = useState('week')
+  const [loadingSingle, setLoadingSingle] = useState(false)
+  const [loadingTrend, setLoadingTrend] = useState(false)
+  const [loadingComp, setLoadingComp] = useState(false)
+
+  // Load dates on mount
+  useEffect(() => {
+    fetch('/api/dates')
+      .then(r => r.json())
+      .then(d => {
+        if (d.dates?.length) {
+          setDates(d.dates)
+          setSelectedDate(d.dates[0])
+        }
+      })
+      .catch(console.error)
+  }, [])
+
+  // Load single meeting data
+  useEffect(() => {
+    if (!selectedDate) return
+    setLoadingSingle(true)
+    const normalized = selectedDate.split('/').map((p, i) => i === 1 || i === 2 ? String(parseInt(p)) : p).join('/')
+    fetch(`/api/analytics?date=${encodeURIComponent(normalized)}`)
+      .then(r => r.json())
+      .then(d => { setSingleData(d); setLoadingSingle(false); })
+      .catch(e => { console.error(e); setLoadingSingle(false); })
+  }, [selectedDate])
+
+  // Load comparison data on mount
+  useEffect(() => {
+    fetchComp('week')
+  }, [])
+
+  function fetchComp(period) {
+    setLoadingComp(true)
+    fetch(`/api/comparison?period=${period}`)
+      .then(r => r.json())
+      .then(d => { setCompData(d); setLoadingComp(false); })
+      .catch(e => { console.error(e); setLoadingComp(false); })
+  }
+
+  function handleTrendQuery(start, end) {
+    if (!start || !end) return
+    setLoadingTrend(true)
+    fetch(`/api/trend?start=${start}&end=${end}`)
+      .then(r => r.json())
+      .then(d => { setTrendData(d); setLoadingTrend(false); })
+      .catch(e => { console.error(e); setLoadingTrend(false); })
+  }
+
+  function handlePeriodChange(p) {
+    setTrendPeriod(p)
+    handleTrendQuery(
+      p === 'thisMonth' ? new Date().toISOString().slice(0, 10) : '',
+      new Date().toISOString().slice(0, 10)
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-8 px-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold mb-1">🌸 秋霞大C 工作坊統計儀表板</h1>
-          <p className="text-indigo-200 text-sm">數據自動同步自 Google 試算表 · 最後更新：{lastUpdated}</p>
-          <p className="text-indigo-200 text-xs mt-1">
-            {filters.dateRange
-              ? <>📅 顯示場次：<span className="font-bold text-white">{filters.dateRange}</span> · </>
-              : <>📅 顯示全部場次 · </>}
-            <span className="font-bold text-white">{totalRecords}</span> 筆記錄 · 原始共 <span className="font-bold text-white">{rawData.length}</span> 筆
-          </p>
-        </div>
-      </div>
+      <header className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-5 py-6">
+        <h1 className="text-xl font-black flex items-center gap-2 mb-1">
+          🌸 秋霞大C 出席儀表板
+        </h1>
+        <p className="text-blue-200 text-xs">即時分析 Coring 會議狀況</p>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 -mt-4">
-        {/* Filters */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-700 flex items-center gap-2">🔍 篩選器</h2>
-            {hasActiveFilters && (
-              <button onClick={clearFilters} className="text-xs text-indigo-600 hover:underline">
-                清除所有篩選
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <SelectFilter label="工作坊類別" options={workshopTypes} value={filters.workshopType} onChange={v => setFilters(f => ({ ...f, workshopType: v }))} />
-            <SelectFilter label="所屬小C" options={smallCs} value={filters.smallC} onChange={v => setFilters(f => ({ ...f, smallC: v }))} />
-            <SelectFilter label="職級" options={ranks} value={filters.rank} onChange={v => setFilters(f => ({ ...f, rank: v }))} />
-            <SelectFilter label="參與角色" options={roles} value={filters.role} onChange={v => setFilters(f => ({ ...f, role: v }))} />
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-500">工作坊場次</label>
-              <select
-                value={filters.dateRange}
-                onChange={e => setFilters(f => ({ ...f, dateRange: e.target.value }))}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              >
-                <option value="">全部場次</option>
-                {availableDates.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+      <main className="max-w-5xl mx-auto px-4 py-5">
+        {/* Tabs */}
+        <div className="bg-white rounded-2xl p-1.5 shadow-sm mb-5 flex gap-1">
+          <TabBtn id="single" label="單次會議" icon="📅" active={activeTab === 'single'} onClick={() => setActiveTab('single')} />
+          <TabBtn id="trend" label="趨勢分析" icon="📈" active={activeTab === 'trend'} onClick={() => setActiveTab('trend')} />
+          <TabBtn id="history" label="歷史統計" icon="📊" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-3 md:grid-cols-3 gap-4 mb-6">
-          <KPICard title="📝 總參與人次" value={totalRecords} sub="篩選後" color="#6366f1" />
-          <KPICard title="👥 獨立人數" value={uniquePersons} sub="不重複計算" color="#10b981" />
-          <KPICard title="🏠 參與小C" value={filteredSmallC} sub={`共 ${rawData.length > 0 ? new Set(rawData.map(r => r['所屬小C'])).size : 0} 個小C`} color="#f59e0b" />
-        </div>
+        {/* Tab content */}
+        {activeTab === 'single' && (
+          <SingleTab
+            dates={dates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            data={singleData}
+            loading={loadingSingle}
+          />
+        )}
+        {activeTab === 'trend' && (
+          <TrendTab
+            data={trendData}
+            loading={loadingTrend}
+            onQuery={handleTrendQuery}
+            trendPeriod={trendPeriod}
+            onPeriodChange={handlePeriodChange}
+          />
+        )}
+        {activeTab === 'history' && (
+          <ComparisonTab
+            data={compData}
+            loading={loadingComp}
+            onPeriodChange={p => { setCompPeriod(p); fetchComp(p); }}
+            activePeriod={compPeriod}
+          />
+        )}
+      </main>
 
-        {/* Charts Row 1 */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-700 mb-4">📈 月份參與趨勢</h3>
-            <div className="h-52">
-              {monthlyData.labels.length > 0
-                ? <Bar data={monthlyData} options={chartOptions} />
-                : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-700 mb-4">🥧 工作坊類別分布</h3>
-            <div className="h-52">
-              {workshopTypeData.labels.length > 0
-                ? <Doughnut data={workshopTypeData} options={doughnutOptions} />
-                : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Row 2 */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-700 mb-4">🏠 小C參與排行 TOP10</h3>
-            <div className="h-52">
-              {smallCData.labels.length > 0
-                ? <Bar data={smallCData} options={chartOptions} />
-                : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-700 mb-4">🏠 小C人數佔比</h3>
-            <div className="h-52">
-              {smallCDoughnutData.labels.length > 0
-                ? <Doughnut data={smallCDoughnutData} options={doughnutOptions} />
-                : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Row 3 */}
-        <div className="grid md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-700 mb-4">🏆 職級分布</h3>
-            <div className="h-52">
-              {rankData.labels.length > 0
-                ? <Doughnut data={rankData} options={doughnutOptions} />
-                : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-700 mb-4">🎭 角色分布</h3>
-            <div className="h-52">
-              {roleData.labels.length > 0
-                ? <Doughnut data={roleData} options={doughnutOptions} />
-                : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
-            <h3 className="font-semibold text-gray-700 mb-4">📋 最近場次</h3>
-            <div className="overflow-y-auto h-44 space-y-2">
-              {recentSessions.map((s, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs border-b border-gray-50 pb-2">
-                  <span className="bg-indigo-100 text-indigo-700 rounded px-1.5 py-0.5 font-medium whitespace-nowrap">{s.date}</span>
-                  <span className="text-gray-600 whitespace-nowrap">{s.type}</span>
-                  <span className="text-gray-400 ml-auto">{s.count}人</span>
-                </div>
-              ))}
-              {recentSessions.length === 0 && <p className="text-gray-400 text-xs text-center py-8">暫無資料</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* 參與者名單 */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
-          <h3 className="font-semibold text-gray-700 mb-4">👥 當場參與者名單 {filters.dateRange ? <span className="text-indigo-500 text-sm">({filters.dateRange})</span> : <span className="text-gray-400 text-sm">(全部場次)</span>}</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">姓名</th>
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">所屬小C</th>
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">區域</th>
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">職級</th>
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">角色</th>
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">工作坊</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r, i) => {
-                  const name = (r['夥伴姓'] || '') + (r['名字'] || '')
-                  return (
-                    <tr key={i} className="border-b border-gray-50 hover:bg-indigo-50/30">
-                      <td className="py-2 px-3 font-medium text-gray-800">{name || <span className="text-gray-300">-</span>}</td>
-                      <td className="py-2 px-3 text-indigo-600 text-xs">{r['所屬小C'] || <span className="text-gray-300">-</span>}</td>
-                      <td className="py-2 px-3 text-gray-600 text-xs">{r['來自哪個區域'] || <span className="text-gray-300">-</span>}</td>
-                      <td className="py-2 px-3 text-gray-600 text-xs">{r['目前聘階'] || <span className="text-gray-300">-</span>}</td>
-                      <td className="py-2 px-3 text-gray-600 text-xs">{r['參與者身分'] || <span className="text-gray-300">-</span>}</td>
-                      <td className="py-2 px-3 text-gray-500 text-xs">{r['請選擇這場工作坊的類別'] || <span className="text-gray-300">-</span>}</td>
-                    </tr>
-                  )
-                })}
-                {filtered.length === 0 && (
-                  <tr><td colSpan="6" className="py-8 text-center text-gray-400 text-sm">暫無資料</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {filtered.length > 0 && <p className="text-xs text-gray-400 mt-2 text-right">共 {filtered.length} 位參與者</p>}
-        </div>
-
-        {/* 說明 */}
-        <div className="text-center text-xs text-gray-400 mt-6">
-          <p>📌 資料來源：Google 試算表（每次開啟自動抓最新）| 秋霞大C教育組</p>
-          <p className="mt-1">篩選不改變原始資料，僅影響本頁顯示範圍</p>
-        </div>
-      </div>
+      <footer className="text-center text-xs text-gray-400 py-6">
+        📌 資料來源：Google 試算表 · 秋霞大C教育組
+      </footer>
     </div>
   )
 }
