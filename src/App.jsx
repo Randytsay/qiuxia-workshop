@@ -18,8 +18,6 @@ ChartJS.register(
   ArcElement, LineElement, PointElement
 )
 
-const SHEET_ID = '1QEytkFQTYVgkwCxgcC4BKrvf9ZkC_GApJd1U6JQAnsI'
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`
 
 const WORKSHOP_COLORS = {
   '經營工作坊': '#6366f1',
@@ -46,17 +44,37 @@ const RANK_COLORS = {
 
 function parseCSV(text) {
   const lines = text.trim().split('\n')
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+  // Parse headers carefully - handle quoted commas
+  const headers = parseCSVLine(lines[0])
   const rows = []
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
+    const values = parseCSVLine(lines[i])
     if (values.length >= headers.length) {
       const row = {}
-      headers.forEach((h, idx) => { row[h] = values[idx] || '' })
+      headers.forEach((h, idx) => { row[h] = (values[idx] || '').trim().replace(/^"|"$/g, '') })
       rows.push(row)
     }
   }
   return rows
+}
+
+function parseCSVLine(line) {
+  const result = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    if (char === '"') {
+      inQuotes = !inQuotes
+    } else if (char === ',' && !inQuotes) {
+      result.push(current)
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  result.push(current)
+  return result
 }
 
 function KPICard({ title, value, sub, color }) {
@@ -98,16 +116,17 @@ export default function App() {
   })
 
   useEffect(() => {
-    fetch(CSV_URL + '&t=' + Date.now(), { cache: 'no-store' })
-      .then(r => r.text())
-      .then(text => {
-        const parsed = parseCSV(text)
-        setRawData(parsed)
-        setLastUpdated(new Date().toLocaleString('zh-TW'))
+    fetch('/api/data')
+      .then(r => r.json())
+      .then(json => {
+        if (json.data) {
+          setRawData(json.data)
+          setLastUpdated(new Date(json.fetchedAt).toLocaleString('zh-TW'))
+        }
         setLoading(false)
       })
       .catch(err => {
-        console.error('CSV load error:', err)
+        console.error('Data load error:', err)
         setLoading(false)
       })
   }, [])
