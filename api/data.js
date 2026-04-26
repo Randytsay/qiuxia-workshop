@@ -35,15 +35,15 @@ export default async function handler(req, res) {
       return result
     }
 
-    const lines = text.trim().split('\n')
-    const headers = parseCSVLine(lines[0])
+    const lines = text.trim().replace(/\r\n?/g, '\n').split('\n')
+    const headers = parseCSVLine(lines[0]).map(h => h.replace(/\r/g, ''))
     const rows = []
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i])
       if (values.length >= headers.length) {
         const row = {}
         headers.forEach((h, idx) => {
-          row[h] = (values[idx] || '').trim().replace(/^"|"$/g, '')
+          row[h] = (values[idx] || '').trim().replace(/^\"|"$/g, '').replace(/\r$/, '')
         })
         rows.push(row)
       }

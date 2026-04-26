@@ -43,15 +43,15 @@ const RANK_COLORS = {
 }
 
 function parseCSV(text) {
-  const lines = text.trim().split('\n')
-  // Parse headers carefully - handle quoted commas
-  const headers = parseCSVLine(lines[0])
+    const lines = text.trim().replace(/\r\n?/g, '\n').split('\n')
+    // Parse headers carefully - handle quoted commas
+    const headers = parseCSVLine(lines[0]).map(h => h.replace(/\r/g, ''))
   const rows = []
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i])
     if (values.length >= headers.length) {
       const row = {}
-      headers.forEach((h, idx) => { row[h] = (values[idx] || '').trim().replace(/^"|"$/g, '') })
+      headers.forEach((h, idx) => { row[h] = (values[idx] || '').trim().replace(/^"|"$/g, '').replace(/\r$/, '') })
       rows.push(row)
     }
   }
