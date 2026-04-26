@@ -503,6 +503,47 @@ export default function App() {
           </div>
         </div>
 
+        {/* 參與者名單 */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
+          <h3 className="font-semibold text-gray-700 mb-4">👥 當場參與者名單 {filters.dateRange ? <span className="text-indigo-500 text-sm">({filters.dateRange})</span> : <span className="text-gray-400 text-sm">(全部場次)</span>}</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">姓名</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">所屬小C</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">區域</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">職級</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">角色</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">工作坊</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice(0, 100).map((r, i) => {
+                  const name = (r['夥伴姓'] || '') + (r['名字'] || '')
+                  return (
+                    <tr key={i} className="border-b border-gray-50 hover:bg-indigo-50/30">
+                      <td className="py-2 px-3 font-medium text-gray-800">{name || <span className="text-gray-300">-</span>}</td>
+                      <td className="py-2 px-3 text-indigo-600 text-xs">{r['所屬小C'] || <span className="text-gray-300">-</span>}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs">{r['來自哪個區域'] || <span className="text-gray-300">-</span>}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs">{r['目前聘階'] || <span className="text-gray-300">-</span>}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs">{r['參與者身分'] || <span className="text-gray-300">-</span>}</td>
+                      <td className="py-2 px-3 text-gray-500 text-xs">{r['請選擇這場工作坊的類別'] || <span className="text-gray-300">-</span>}</td>
+                    </tr>
+                  )
+                })}
+                {filtered.length === 0 && (
+                  <tr><td colSpan="6" className="py-8 text-center text-gray-400 text-sm">暫無資料</td></tr>
+                )}
+                {filtered.length > 100 && (
+                  <tr><td colSpan="6" className="py-3 text-center text-indigo-400 text-xs">⋯ 還有 {filtered.length - 100} 位參與者</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length > 0 && <p className="text-xs text-gray-400 mt-2 text-right">共 {filtered.length} 位參與者（最多顯示前 100 筆）</p>}
+        </div>
+
         {/* 說明 */}
         <div className="text-center text-xs text-gray-400 mt-6">
           <p>📌 資料來源：Google 試算表（每次開啟自動抓最新）| 秋霞大C教育組</p>
