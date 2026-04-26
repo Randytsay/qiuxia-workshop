@@ -98,7 +98,7 @@
     .btn-secondary:hover { background: #059669; }
     .kpi-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 14px;
     }
     .kpi-card {
@@ -249,19 +249,14 @@
       <div class="kpi-sub">本次篩選</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">👥 獨立人數</div>
+      <div class="kpi-label">👥 參與人數</div>
       <div class="kpi-value" id="kpiUnique" style="color:#10b981">—</div>
       <div class="kpi-sub">不重複</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">🏠 參與小C</div>
+      <div class="kpi-label">🏠 共幾個小C</div>
       <div class="kpi-value" id="kpiSmallC" style="color:#f59e0b">—</div>
-      <div class="kpi-sub">共多少組</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">📅 工作坊場次</div>
-      <div class="kpi-value" id="kpiSessions" style="color:#ec4899">—</div>
-      <div class="kpi-sub">全部年份</div>
+      <div class="kpi-sub">參與</div>
     </div>
   </div>
 
@@ -503,7 +498,6 @@ function clearAllCharts() {
   document.getElementById('kpiTotal').textContent = '—';
   document.getElementById('kpiUnique').textContent = '—';
   document.getElementById('kpiSmallC').textContent = '—';
-  document.getElementById('kpiSessions').textContent = '—';
   chartKeys.forEach(k => document.getElementById('dl' + k.charAt(0).toUpperCase() + k.slice(1)).disabled = true);
 }
 
@@ -520,12 +514,10 @@ function renderAll(date, category) {
     smallCMap[sc]++;
   });
   const smallCCount = Object.keys(smallCMap).length;
-  const allDates = [...new Set(allData.map(r => r['參與工作坊日期']).filter(Boolean))].length;
 
   document.getElementById('kpiTotal').textContent = total;
   document.getElementById('kpiUnique').textContent = uniqueCount;
   document.getElementById('kpiSmallC').textContent = smallCCount;
-  document.getElementById('kpiSessions').textContent = allDates;
 
   const stats = Object.entries(smallCMap)
     .map(([name, value]) => ({ name, value }))
