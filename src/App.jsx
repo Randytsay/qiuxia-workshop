@@ -185,10 +185,8 @@ export default function App() {
   const totalRecords = filtered.length
   const uniquePersons = new Set(filtered.map(r => r['夥伴姓'] + r['名字'])).size
   const filteredWorkshopTypes = new Set(filtered.map(r => r['請選擇這場工作坊的類別']).filter(Boolean)).size
+  const filteredSmallC = new Set(filtered.map(r => r['所屬小C']).filter(Boolean)).size
   const totalSessions = availableDates.length
-  const repeatRate = totalRecords > 0 && uniquePersons > 0
-    ? ((totalRecords / uniquePersons - 1) * 100).toFixed(1) + '%'
-    : '0%'
 
   // 月份趨勢
   const monthlyData = useMemo(() => {
@@ -426,11 +424,10 @@ export default function App() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-3 md:grid-cols-3 gap-4 mb-6">
           <KPICard title="📝 總參與人次" value={totalRecords} sub="篩選後" color="#6366f1" />
           <KPICard title="👥 獨立人數" value={uniquePersons} sub="不重複計算" color="#10b981" />
-          <KPICard title="🏠 參與小C" value={smallCs.length} sub={`共 ${rawData.length > 0 ? new Set(rawData.map(r => r['所屬小C'])).size : 0} 個小C`} color="#f59e0b" />
-          <KPICard title="🔄 複訓率" value={repeatRate} sub="人均參加次數" color="#ec4899" />
+          <KPICard title="🏠 參與小C" value={filteredSmallC} sub={`共 ${rawData.length > 0 ? new Set(rawData.map(r => r['所屬小C'])).size : 0} 個小C`} color="#f59e0b" />
         </div>
 
         {/* Charts Row 1 */}
