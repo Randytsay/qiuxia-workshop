@@ -159,31 +159,37 @@
     .table-header h3 { font-size: 0.95em; font-weight: 600; }
     .table-header .table-subtitle { font-size: 0.72em; color: #94a3b8; margin-top: 2px; }
     .table-scroll { max-height: 420px; overflow-y: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+    table { width: 100%; border-collapse: collapse; }
     thead th {
       background: #f8fafc;
-      padding: 8px 12px;
+      padding: 10px 14px;
       text-align: left;
       font-weight: 600;
-      font-size: 0.78em;
+      font-size: 0.82em;
       color: var(--label-color);
       border-bottom: 1px solid var(--border-color);
       position: sticky;
       top: 0;
       z-index: 1;
+      white-space: nowrap;
     }
-    tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
+    thead th:first-child { width: 20%; }
+    thead th:nth-child(2) { width: 18%; }
+    thead th:nth-child(3) { width: 15%; }
+    thead th:nth-child(4) { width: 10%; }
+    thead th:nth-child(5) { width: 15%; }
+    tbody td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; font-size: 0.9em; }
     tbody tr:hover td { background: var(--hover-row); }
     .group-row td {
       background: #ede9fe !important;
       font-weight: 700;
-      font-size: 0.82em;
+      font-size: 0.86em;
       color: #5b21b6;
-      padding: 9px 12px 7px;
+      padding: 10px 14px 8px;
       border-top: 2px solid #c4b5fd;
       border-bottom: 1px solid #ddd6fe;
     }
-    .name-cell { font-weight: 500; color: #1e293b; }
+    .name-cell { font-weight: 600; color: #1e293b; font-size: 0.95em; }
     .smallc-tag { display: inline-block; background: #eef2ff; color: #4f46e5; border-radius: 20px; padding: 1px 8px; font-size: 0.78em; }
     .role-badge { display: inline-block; background: #f0fdf4; color: #15803d; border-radius: 20px; padding: 1px 8px; font-size: 0.78em; }
     .empty-state { text-align: center; color: #94a3b8; padding: 60px 20px; font-size: 0.9em; }
