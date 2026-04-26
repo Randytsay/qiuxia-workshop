@@ -17,35 +17,21 @@
       --bg-page: #f0f2f5;
       --hover-row: #f1f5f9;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       font-size: 14px;
       background-color: var(--bg-page);
       color: var(--text-color);
     }
-
-    /* ── Header ── */
     .site-header {
       background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
       color: white;
       padding: 24px 20px 20px;
     }
-    .site-header .inner {
-      max-width: 1300px;
-      margin: 0 auto;
-    }
-    .site-header h1 {
-      font-size: 1.5em;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .site-header .meta {
-      font-size: 0.8em;
-      color: rgba(255,255,255,0.75);
-    }
+    .site-header .inner { max-width: 1300px; margin: 0 auto; }
+    .site-header h1 { font-size: 1.5em; font-weight: 700; margin-bottom: 4px; }
+    .site-header .meta { font-size: 0.8em; color: rgba(255,255,255,0.75); }
     .site-header .badge {
       display: inline-block;
       background: rgba(255,255,255,0.2);
@@ -54,8 +40,6 @@
       font-size: 0.75em;
       margin-left: 8px;
     }
-
-    /* ── Main Container ── */
     .main-container {
       max-width: 1300px;
       margin: 0 auto;
@@ -64,8 +48,6 @@
       flex-direction: column;
       gap: 20px;
     }
-
-    /* ── Controls ── */
     .controls-container {
       background: var(--panel-bg);
       border-radius: 10px;
@@ -81,7 +63,6 @@
       flex-wrap: wrap;
     }
     .controls-row:last-child { margin-bottom: 0; }
-
     label {
       width: 100px;
       font-size: 0.88em;
@@ -89,7 +70,6 @@
       font-weight: 500;
       flex-shrink: 0;
     }
-
     select {
       padding: 8px 12px;
       font-size: 0.88em;
@@ -101,16 +81,8 @@
       cursor: pointer;
       transition: border-color 0.15s;
     }
-    select:focus {
-      outline: none;
-      border-color: var(--primary-accent);
-    }
-    select:disabled {
-      background: #f8fafc;
-      color: #94a3b8;
-      cursor: not-allowed;
-    }
-
+    select:focus { outline: none; border-color: var(--primary-accent); }
+    select:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
     .btn {
       padding: 8px 18px;
       font-size: 0.88em;
@@ -120,20 +92,10 @@
       font-weight: 500;
       transition: all 0.15s;
     }
-    .btn-primary {
-      background: var(--primary-accent);
-      color: white;
-    }
+    .btn-primary { background: var(--primary-accent); color: white; }
     .btn-primary:hover { background: var(--primary-dark); }
-    .btn-primary:disabled { background: #c7d2fe; cursor: not-allowed; }
-    .btn-secondary {
-      background: var(--secondary-accent);
-      color: white;
-    }
+    .btn-secondary { background: var(--secondary-accent); color: white; }
     .btn-secondary:hover { background: #059669; }
-    .btn-secondary:disabled { background: #6ee7b7; cursor: not-allowed; }
-
-    /* ── KPI Row ── */
     .kpi-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -147,30 +109,14 @@
       border: 1px solid var(--border-color);
       text-align: center;
     }
-    .kpi-card .kpi-label {
-      font-size: 0.78em;
-      color: var(--label-color);
-      margin-bottom: 6px;
-      font-weight: 500;
-    }
-    .kpi-card .kpi-value {
-      font-size: 2em;
-      font-weight: 700;
-      line-height: 1;
-    }
-    .kpi-card .kpi-sub {
-      font-size: 0.72em;
-      color: #94a3b8;
-      margin-top: 4px;
-    }
-
-    /* ── Chart Cards ── */
+    .kpi-card .kpi-label { font-size: 0.78em; color: var(--label-color); margin-bottom: 6px; font-weight: 500; }
+    .kpi-card .kpi-value { font-size: 2em; font-weight: 700; line-height: 1; }
+    .kpi-card .kpi-sub { font-size: 0.72em; color: #94a3b8; margin-top: 4px; }
     .charts-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
       gap: 20px;
     }
-
     .chart-card {
       background: var(--panel-bg);
       border-radius: 10px;
@@ -188,16 +134,8 @@
       margin-bottom: 10px;
       flex-shrink: 0;
     }
-    .chart-card .card-title {
-      font-size: 0.95em;
-      font-weight: 600;
-      color: var(--text-color);
-    }
-    .chart-card .card-subtitle {
-      font-size: 0.72em;
-      color: #94a3b8;
-      margin-top: 2px;
-    }
+    .chart-card .card-title { font-size: 0.95em; font-weight: 600; color: var(--text-color); }
+    .chart-card .card-subtitle { font-size: 0.72em; color: #94a3b8; margin-top: 2px; }
     .btn-download {
       padding: 4px 10px;
       font-size: 0.75em;
@@ -209,14 +147,7 @@
     }
     .btn-download:hover { background: #475569; }
     .btn-download:disabled { background: #cbd5e1; cursor: not-allowed; }
-
-    .chart-container {
-      flex: 1;
-      min-height: 340px;
-      width: 100%;
-    }
-
-    /* ── Table ── */
+    .chart-container { flex: 1; min-height: 340px; width: 100%; }
     .table-card {
       background: var(--panel-bg);
       border-radius: 10px;
@@ -224,28 +155,11 @@
       border: 1px solid var(--border-color);
       overflow: hidden;
     }
-    .table-header {
-      padding: 14px 18px 10px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    .table-header h3 {
-      font-size: 0.95em;
-      font-weight: 600;
-    }
-    .table-header .table-subtitle {
-      font-size: 0.72em;
-      color: #94a3b8;
-      margin-top: 2px;
-    }
-    .table-scroll {
-      max-height: 420px;
-      overflow-y: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85em;
-    }
+    .table-header { padding: 14px 18px 10px; border-bottom: 1px solid var(--border-color); }
+    .table-header h3 { font-size: 0.95em; font-weight: 600; }
+    .table-header .table-subtitle { font-size: 0.72em; color: #94a3b8; margin-top: 2px; }
+    .table-scroll { max-height: 420px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
     thead th {
       background: #f8fafc;
       padding: 8px 12px;
@@ -258,10 +172,7 @@
       top: 0;
       z-index: 1;
     }
-    tbody td {
-      padding: 8px 12px;
-      border-bottom: 1px solid #f1f5f9;
-    }
+    tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
     tbody tr:hover td { background: var(--hover-row); }
     .group-row td {
       background: #ede9fe !important;
@@ -273,59 +184,14 @@
       border-bottom: 1px solid #ddd6fe;
     }
     .name-cell { font-weight: 500; color: #1e293b; }
-    .smallc-tag {
-      display: inline-block;
-      background: #eef2ff;
-      color: #4f46e5;
-      border-radius: 20px;
-      padding: 1px 8px;
-      font-size: 0.78em;
-    }
-    .role-badge {
-      display: inline-block;
-      background: #f0fdf4;
-      color: #15803d;
-      border-radius: 20px;
-      padding: 1px 8px;
-      font-size: 0.78em;
-    }
-
-    /* ── Empty state ── */
-    .empty-state {
-      text-align: center;
-      color: #94a3b8;
-      padding: 60px 20px;
-      font-size: 0.9em;
-    }
+    .smallc-tag { display: inline-block; background: #eef2ff; color: #4f46e5; border-radius: 20px; padding: 1px 8px; font-size: 0.78em; }
+    .role-badge { display: inline-block; background: #f0fdf4; color: #15803d; border-radius: 20px; padding: 1px 8px; font-size: 0.78em; }
+    .empty-state { text-align: center; color: #94a3b8; padding: 60px 20px; font-size: 0.9em; }
     .empty-state .emoji { font-size: 2.5em; display: block; margin-bottom: 10px; }
-
-    /* ── Loader ── */
-    .loader-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--label-color);
-      font-size: 0.82em;
-    }
-    .loader {
-      width: 18px; height: 18px;
-      border: 2.5px solid #e2e8f0;
-      border-top-color: var(--primary-accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
-    }
+    .loader-wrap { display: flex; align-items: center; gap: 8px; color: var(--label-color); font-size: 0.82em; }
+    .loader { width: 18px; height: 18px; border: 2.5px solid #e2e8f0; border-top-color: var(--primary-accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Footer ── */
-    .site-footer {
-      text-align: center;
-      font-size: 0.72em;
-      color: #94a3b8;
-      padding: 20px;
-    }
-
-    /* ── Responsive ── */
+    .site-footer { text-align: center; font-size: 0.72em; color: #94a3b8; padding: 20px; }
     @media (max-width: 640px) {
       .charts-grid { grid-template-columns: 1fr; }
       .controls-row { flex-direction: column; align-items: stretch; }
@@ -338,7 +204,6 @@
 </head>
 <body>
 
-<!-- Header -->
 <div class="site-header">
   <div class="inner">
     <h1>🌸 秋霞大C 工作坊統計儀表板</h1>
@@ -367,7 +232,7 @@
       <select id="categorySelect" disabled><option value="">請先選擇日期</option></select>
     </div>
     <div class="controls-row">
-      <button class="btn btn-primary" id="generateBtn" disabled>📊 生成統計圖</button>
+      <button class="btn btn-primary" id="generateBtn">📊 生成統計圖</button>
       <div class="loader-wrap" id="loaderWrap" style="display:none">
         <div class="loader"></div>
         <span>載入資料中...</span>
@@ -402,43 +267,39 @@
   <!-- Charts Grid -->
   <div class="charts-grid">
 
-    <!-- Rose Chart -->
     <div class="chart-card">
       <div class="card-header">
         <div>
           <div class="card-title">🥧 小C參與人數（玫瑰圖）</div>
           <div class="card-subtitle" id="roseSub">請先生成統計圖</div>
         </div>
-        <button class="btn-download" id="dlRose" disabled onclick="downloadChart('rose')">⬇ 下載</button>
+        <button class="btn-download" id="dlRose" onclick="downloadChart('rose')">⬇ 下載</button>
       </div>
       <div id="chartRose" class="chart-container"></div>
     </div>
 
-    <!-- Vertical Bar Chart -->
     <div class="chart-card">
       <div class="card-header">
         <div>
           <div class="card-title">📊 小C參與人數（柱狀圖）</div>
           <div class="card-subtitle" id="barVSub">請先生成統計圖</div>
         </div>
-        <button class="btn-download" id="dlBarV" disabled onclick="downloadChart('barV')">⬇ 下載</button>
+        <button class="btn-download" id="dlBarV" onclick="downloadChart('barV')">⬇ 下載</button>
       </div>
       <div id="chartBarV" class="chart-container"></div>
     </div>
 
-    <!-- Horizontal Bar Chart -->
     <div class="chart-card">
       <div class="card-header">
         <div>
           <div class="card-title">📊 小C參與人數（條形圖）</div>
           <div class="card-subtitle" id="barHSub">請先生成統計圖</div>
         </div>
-        <button class="btn-download" id="dlBarH" disabled onclick="downloadChart('barH')">⬇ 下載</button>
+        <button class="btn-download" id="dlBarH" onclick="downloadChart('barH')">⬇ 下載</button>
       </div>
       <div id="chartBarH" class="chart-container"></div>
     </div>
 
-    <!-- Participant Table -->
     <div class="table-card">
       <div class="table-header">
         <h3>👥 參與者詳細名單</h3>
@@ -462,50 +323,34 @@
 <script>
 'use strict';
 
-// ── State ──────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────
 let allData = [];
 let filteredData = [];
 const chartInstances = {};
 const chartKeys = ['rose', 'barV', 'barH'];
-const placeholders = { rose: '🥧 玫瑰圖', barV: '📊 柱狀圖', barH: '📊 條形圖' };
 
 // Color gradient palette (9 groups × 2 stops)
 const COLOR_GRADIENTS = [
-  ['#6366f1', '#3730a3'],   // indigo
-  ['#10b981', '#065f46'],   // emerald
-  ['#f59e0b', '#92400e'],   // amber
-  ['#ef4444', '#7f1d1d'],   // red
-  ['#06b6d4', '#164e63'],   // cyan
-  ['#ec4899', '#831843'],   // pink
-  ['#f97316', '#7c2d12'],   // orange
-  ['#8b5cf6', '#4c1d95'],   // violet
-  ['#84cc16', '#3f6212'],   // lime
+  ['#6366f1', '#3730a3'],
+  ['#10b981', '#065f46'],
+  ['#f59e0b', '#92400e'],
+  ['#ef4444', '#7f1d1d'],
+  ['#06b6d4', '#164e63'],
+  ['#ec4899', '#831843'],
+  ['#f97316', '#7c2d12'],
+  ['#8b5cf6', '#4c1d95'],
+  ['#84cc16', '#3f6212'],
 ];
 
 function getItemStyle(idx, type) {
   const [c0, c1] = COLOR_GRADIENTS[idx % COLOR_GRADIENTS.length];
   if (type === 'bar') {
-    return {
-      color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-        colorStops: [{ offset: 0, color: c0 }, { offset: 1, color: c1 }] },
-      borderRadius: [4, 4, 0, 0],
-    };
+    return { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: c0 }, { offset: 1, color: c1 }] }, borderRadius: [4, 4, 0, 0] };
   }
   if (type === 'barH') {
-    return {
-      color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
-        colorStops: [{ offset: 0, color: c0 }, { offset: 1, color: c1 }] },
-      borderRadius: [0, 4, 4, 0],
-    };
+    return { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: c0 }, { offset: 1, color: c1 }] }, borderRadius: [0, 4, 4, 0] };
   }
-  // rose
-  return {
-    color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-      colorStops: [{ offset: 0, color: c0 }, { offset: 1, color: c1 }] },
-    borderRadius: 6,
-    borderWidth: 0.5,
-    borderColor: 'rgba(0,0,0,0.08)',
-  };
+  return { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: c0 }, { offset: 1, color: c1 }] }, borderRadius: 6, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)' };
 }
 
 // ── Init Charts ──────────────────────────────────────────────────
@@ -521,8 +366,7 @@ function initCharts() {
 
 function showPlaceholder(key, msg) {
   chartInstances[key].setOption({
-    title: { text: msg, left: 'center', top: 'center',
-      textStyle: { color: '#cbd5e1', fontSize: 14 } }
+    title: { text: msg, left: 'center', top: 'center', textStyle: { color: '#cbd5e1', fontSize: 14 } }
   });
 }
 
@@ -533,9 +377,7 @@ async function loadData() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
     allData = json.data || [];
-    const fetchedAt = json.fetchedAt
-      ? new Date(json.fetchedAt).toLocaleString('zh-TW')
-      : new Date().toLocaleString('zh-TW');
+    const fetchedAt = json.fetchedAt ? new Date(json.fetchedAt).toLocaleString('zh-TW') : new Date().toLocaleString('zh-TW');
     document.getElementById('lastUpdated').textContent = '最後更新：' + fetchedAt;
     document.getElementById('totalBadge').textContent = '共 ' + allData.length + ' 筆記錄';
     populateYearSelect();
@@ -567,14 +409,12 @@ document.getElementById('yearSelect').addEventListener('change', function () {
   const year = this.value;
   const dateSel = document.getElementById('dateSelect');
   const catSel = document.getElementById('categorySelect');
-  const genBtn = document.getElementById('generateBtn');
 
   dateSel.innerHTML = '<option value="">讀取中...</option>';
   dateSel.disabled = true;
   catSel.innerHTML = '<option value="">請先選擇日期</option>';
   catSel.disabled = true;
-  genBtn.disabled = true;
-  clearAll();
+  clearAllCharts();
 
   if (!year) {
     dateSel.innerHTML = '<option value="">請先選擇年份</option>';
@@ -600,13 +440,15 @@ document.getElementById('dateSelect').addEventListener('change', function () {
   const date = this.value;
   const year = document.getElementById('yearSelect').value;
   const catSel = document.getElementById('categorySelect');
-  const genBtn = document.getElementById('generateBtn');
 
   catSel.innerHTML = '<option value="">讀取中...</option>';
   catSel.disabled = true;
-  genBtn.disabled = true;
 
-  if (!date) { catSel.innerHTML = '<option value="">請先選擇日期</option>'; return; }
+  if (!date) {
+    catSel.innerHTML = '<option value="">請先選擇日期</option>';
+    clearAllCharts();
+    return;
+  }
 
   const cats = [...new Set(allData
     .filter(r => {
@@ -623,22 +465,26 @@ document.getElementById('dateSelect').addEventListener('change', function () {
   if (cats.length > 0) {
     catSel.value = cats[0];
     catSel.dispatchEvent(new Event('change'));
+  } else {
+    clearAllCharts();
   }
 });
 
 document.getElementById('categorySelect').addEventListener('change', function () {
-  document.getElementById('generateBtn').disabled = !this.value;
+  // 類別一選好，立刻自動生成
+  if (this.value) generateAndRender();
 });
 
 document.getElementById('generateBtn').addEventListener('click', function () {
+  generateAndRender();
+});
+
+// ── Core: Filter & Render ─────────────────────────────────────────
+function generateAndRender() {
   const year = document.getElementById('yearSelect').value;
   const date = document.getElementById('dateSelect').value;
   const category = document.getElementById('categorySelect').value;
-
-  if (!year || !date || !category) {
-    alert('請選擇完整的年份、日期和類別！');
-    return;
-  }
+  if (!year || !date || !category) return;
 
   filteredData = allData.filter(r => {
     const d = (r['參與工作坊日期'] || '').trim();
@@ -647,25 +493,21 @@ document.getElementById('generateBtn').addEventListener('click', function () {
   });
 
   renderAll(date, category);
-});
+}
 
 // ── Clear ─────────────────────────────────────────────────────────
-function clearAll() {
-  chartKeys.forEach(k => showPlaceholder(k, placeholders[k] + ' — 請先生成統計圖'));
-  document.getElementById('tableWrap').innerHTML = `
-    <div class="empty-state"><span class="emoji">📋</span>請選擇條件並點擊「生成統計圖」</div>`;
+function clearAllCharts() {
+  chartKeys.forEach(k => showPlaceholder(k, '請先生成統計圖'));
+  document.getElementById('tableWrap').innerHTML = '<div class="empty-state"><span class="emoji">📋</span>請選擇條件並點擊「生成統計圖」</div>';
   document.getElementById('kpiTotal').textContent = '—';
   document.getElementById('kpiUnique').textContent = '—';
   document.getElementById('kpiSmallC').textContent = '—';
   document.getElementById('kpiSessions').textContent = '—';
-  chartKeys.forEach(k => document.getElementById('dl' + capitalize(k)).disabled = true);
+  chartKeys.forEach(k => document.getElementById('dl' + k.charAt(0).toUpperCase() + k.slice(1)).disabled = true);
 }
-
-function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 // ── Render ───────────────────────────────────────────────────────
 function renderAll(date, category) {
-  // Stats
   const total = filteredData.length;
   const uniqueNames = new Set(filteredData.map(r => (r['夥伴姓']||'') + (r['名字']||'')));
   const uniqueCount = uniqueNames.size;
@@ -684,7 +526,6 @@ function renderAll(date, category) {
   document.getElementById('kpiSmallC').textContent = smallCCount;
   document.getElementById('kpiSessions').textContent = allDates;
 
-  // Sort smallC stats
   const stats = Object.entries(smallCMap)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
@@ -692,67 +533,43 @@ function renderAll(date, category) {
   const unit = '人';
   const subtext = `${date} · ${category}`;
   const totalStr = `（共 ${total} ${unit}）`;
-  const titleStyle = {
-    textStyle: { fontSize: 14, fontWeight: '600', color: '#1e293b' },
-    subtextStyle: { fontSize: 11, color: '#94a3b8' },
-  };
+  const titleStyle = { textStyle: { fontSize: 14, fontWeight: '600', color: '#1e293b' }, subtextStyle: { fontSize: 11, color: '#94a3b8' } };
 
-  const tooltipFormatter = params =>
-    `${params.name}：${params.value}${unit}（${params.percent.toFixed(1)}%）`;
-
-  // ── Rose Chart ──
-  const roseOption = {
+  // Rose Chart
+  chartInstances.rose.setOption({
     title: { ...titleStyle, text: '各小C參與人數 ' + totalStr, subtext, left: 'center', top: 0 },
-    tooltip: { trigger: 'item', formatter: tooltipFormatter },
+    tooltip: { trigger: 'item', formatter: p => `${p.name}：${p.value}${unit}（${p.percent.toFixed(1)}%）` },
     series: [{
-      type: 'pie',
-      radius: ['30%', '72%'],
-      center: ['50%', '55%'],
-      roseType: 'area',
-      data: stats.map((s, i) => ({
-        name: s.name,
-        value: s.value,
-        itemStyle: getItemStyle(i, 'rose'),
-      })),
-      label: {
-        show: true,
-        formatter: '{b}\n{v}' + unit + '\n{d}%',
-        fontSize: 10,
-        lineHeight: 14,
-        color: '#475569',
-      },
+      type: 'pie', radius: ['30%', '72%'], center: ['50%', '55%'], roseType: 'area',
+      data: stats.map((s, i) => ({ name: s.name, value: s.value, itemStyle: getItemStyle(i, 'rose') })),
+      label: { show: true, formatter: '{b}\n{v}'+unit+'\n{d}%', fontSize: 10, lineHeight: 14, color: '#475569' },
       labelLine: { length: 6, length2: 10 },
       emphasis: { itemStyle: { shadowBlur: 14, shadowColor: 'rgba(0,0,0,0.25)' } },
     }],
-  };
-  chartInstances.rose.setOption(roseOption, true);
+  }, true);
   document.getElementById('roseSub').textContent = subtext;
   document.getElementById('dlRose').disabled = false;
 
-  // ── Vertical Bar ──
-  const barVOption = {
+  // Vertical Bar
+  chartInstances.barV.setOption({
     title: { ...titleStyle, text: '各小C參與人數 ' + totalStr, subtext, left: 'center', top: 0 },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-      formatter: params => `${params[0].name}<br/>${params[0].value}${unit}` },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: p => `${p[0].name}<br/>${p[0].value}${unit}` },
     grid: { left: '3%', right: '4%', bottom: '15%', top: '28%', containLabel: true },
-    xAxis: { type: 'category', data: stats.map(s => s.name),
-      axisLabel: { interval: 0, rotate: stats.length > 5 ? 30 : 0, fontSize: 10, margin: 8 } },
+    xAxis: { type: 'category', data: stats.map(s => s.name), axisLabel: { interval: 0, rotate: stats.length > 5 ? 30 : 0, fontSize: 10, margin: 8 } },
     yAxis: { type: 'value', name: unit, nameTextStyle: { fontSize: 10, padding: [0,0,0,30] } },
     series: [{
       type: 'bar', barWidth: '55%',
       data: stats.map((s, i) => ({ value: s.value, itemStyle: getItemStyle(i, 'bar') })),
       label: { show: true, position: 'top', formatter: '{c}'+unit, fontSize: 10, color: '#444' },
     }],
-  };
-  chartInstances.barV.setOption(barVOption, true);
+  }, true);
   document.getElementById('barVSub').textContent = subtext;
   document.getElementById('dlBarV').disabled = false;
 
-  // ── Horizontal Bar ──
-  const barHOption = {
+  // Horizontal Bar
+  chartInstances.barH.setOption({
     title: { ...titleStyle, text: '各小C參與人數 ' + totalStr, subtext, left: 'center', top: 0 },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-      formatter: params => `${params[0].name}<br/>${params[0].value}${unit}` },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: p => `${p[0].name}<br/>${p[0].value}${unit}` },
     grid: { left: '14%', right: '12%', bottom: '3%', top: '28%', containLabel: true },
     xAxis: { type: 'value', name: unit, nameTextStyle: { fontSize: 10 } },
     yAxis: { type: 'category', data: stats.map(s => s.name), axisLabel: { interval: 0, fontSize: 10, margin: 6 } },
@@ -761,55 +578,40 @@ function renderAll(date, category) {
       data: stats.map((s, i) => ({ value: s.value, itemStyle: getItemStyle(i, 'barH') })),
       label: { show: true, position: 'right', formatter: '{c}'+unit, fontSize: 10, color: '#444' },
     }],
-  };
-  chartInstances.barH.setOption(barHOption, true);
+  }, true);
   document.getElementById('barHSub').textContent = subtext;
   document.getElementById('dlBarH').disabled = false;
 
-  // ── Table ──
+  // Table
   renderTable(subtext);
 }
 
 function renderTable(subtext) {
-  // Group by 小C
   const groups = {};
   filteredData.forEach(r => {
     const sc = r['所屬小C'] || '未知';
     if (!groups[sc]) groups[sc] = [];
     groups[sc].push(r);
   });
-
   const sortedGroups = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
 
   let html = `<table>
-    <thead>
-      <tr>
-        <th>姓名</th><th>所屬小C</th><th>區域</th><th>職級</th><th>角色</th>
-      </tr>
-    </thead>
+    <thead><tr><th>姓名</th><th>所屬小C</th><th>區域</th><th>職級</th><th>角色</th></tr></thead>
     <tbody>`;
-
   sortedGroups.forEach(([scName, rows]) => {
-    // Group header
-    html += `<tr class="group-row">
-      <td colspan="5">🏠 ${scName}（${rows.length} 人）</td>
-    </tr>`;
+    html += `<tr class="group-row"><td colspan="5">🏠 ${scName}（${rows.length} 人）</td></tr>`;
     rows.forEach(r => {
       const name = (r['夥伴姓'] || '') + (r['名字'] || '');
-      const region = r['來自哪個區域'] || '—';
-      const rank = r['目前聘階'] || '—';
-      const role = r['參與者身分'] || '—';
       html += `<tr>
         <td class="name-cell">${name || '—'}</td>
         <td><span class="smallc-tag">${scName}</span></td>
-        <td>${region}</td>
-        <td>${rank}</td>
-        <td><span class="role-badge">${role}</span></td>
+        <td>${r['來自哪個區域'] || '—'}</td>
+        <td>${r['目前聘階'] || '—'}</td>
+        <td><span class="role-badge">${r['參與者身分'] || '—'}</span></td>
       </tr>`;
     });
   });
-
-  html += `</tbody></table>`;
+  html += '</tbody></table>';
   document.getElementById('tableWrap').innerHTML = html;
   document.getElementById('tableSub').textContent = subtext + ' · 共 ' + filteredData.length + ' 人';
 }
@@ -818,14 +620,13 @@ function renderTable(subtext) {
 function downloadChart(key) {
   const inst = chartInstances[key];
   const date = document.getElementById('dateSelect').value;
-  const category = document.getElementById('categorySelect').value;
-  const safe = (date + '-' + category).replace(/\//g, '-');
+  const cat = document.getElementById('categorySelect').value;
+  const safe = (date + '-' + cat).replace(/\//g, '-');
   const names = { rose: '玫瑰圖', barV: '柱狀圖', barH: '條形圖' };
-
   const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' });
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${safe}-${names[key]}.png`;
+  a.download = safe + '-' + names[key] + '.png';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -834,7 +635,7 @@ function downloadChart(key) {
 // ── Boot ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initCharts();
-  chartKeys.forEach(k => showPlaceholder(k, placeholders[k] + ' — 請先生成統計圖'));
+  chartKeys.forEach(k => showPlaceholder(k, '請先生成統計圖'));
   loadData();
 });
 </script>
