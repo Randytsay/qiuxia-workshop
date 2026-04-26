@@ -247,7 +247,14 @@ export default function App() {
   }, [filtered])
 
   // 小C人數佔比圖（甜甜圈）
-  const SMALLC_COLORS = ['#6366f1','#10b981','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#f97316','#84cc16','#0ea5e9','#fbbf24','#a78bfa','#34d399','#fb923c','#f472b6','#4ade80','#38bdf8']
+  const SMALLC_COLORS = [
+    '#6366f1','#10b981','#f59e0b','#ec4899','#8b5cf6','#06b6d4',
+    '#f97316','#84cc16','#0ea5e9','#fbbf24','#a78bfa','#34d399',
+    '#fb923c','#f472b6','#4ade80','#38bdf8','#c084fc','#22d3ee',
+    '#facc15','#4ade80','#fb7185','#818cf8','#2dd4bf','#e879f9',
+    '#a3e635','#22d3d3','#fde047','#f9a8d4','#67e8f9','#d8b4fe',
+    '#86efac','#7dd3fc','#fcd34d','#f0abfc','#6ee7b7','#bae6fd',
+  ]
   const smallCDoughnutData = useMemo(() => {
     const map = {}
     filtered.forEach(r => {
