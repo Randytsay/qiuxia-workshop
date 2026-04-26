@@ -266,7 +266,7 @@ export default function App() {
       labels: sorted.map(([k]) => k),
       datasets: [{
         data: sorted.map(([, v]) => v),
-        backgroundColor: sorted.map(([_, i]) => SMALLC_COLORS[i % SMALLC_COLORS.length]),
+        backgroundColor: sorted.map(([, i]) => SMALLC_COLORS[i % SMALLC_COLORS.length]),
         borderWidth: 0,
       }]
     }
