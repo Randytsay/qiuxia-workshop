@@ -270,7 +270,7 @@
     <div class="chart-card">
       <div class="card-header">
         <div>
-          <div class="card-title">🥧 小C參與人數（玫瑰圖）</div>
+          <div class="card-title">🥧 小C參與人數</div>
           <div class="card-subtitle" id="roseSub">請先生成統計圖</div>
         </div>
         <button class="btn-download" id="dlRose" onclick="downloadChart('rose')">⬇ 下載</button>
@@ -281,7 +281,7 @@
     <div class="chart-card">
       <div class="card-header">
         <div>
-          <div class="card-title">📊 小C參與人數（柱狀圖）</div>
+          <div class="card-title">📊 小C參與人數</div>
           <div class="card-subtitle" id="barVSub">請先生成統計圖</div>
         </div>
         <button class="btn-download" id="dlBarV" onclick="downloadChart('barV')">⬇ 下載</button>
@@ -292,7 +292,7 @@
     <div class="chart-card">
       <div class="card-header">
         <div>
-          <div class="card-title">📊 小C參與人數（條形圖）</div>
+          <div class="card-title">📊 小C參與人數</div>
           <div class="card-subtitle" id="barHSub">請先生成統計圖</div>
         </div>
         <button class="btn-download" id="dlBarH" onclick="downloadChart('barH')">⬇ 下載</button>
@@ -542,7 +542,7 @@ function renderAll(date, category) {
     series: [{
       type: 'pie', radius: ['30%', '72%'], center: ['50%', '55%'], roseType: 'area',
       data: stats.map((s, i) => ({ name: s.name, value: s.value, itemStyle: getItemStyle(i, 'rose') })),
-      label: { show: true, formatter: '{b}\n{v}'+unit+'\n{d}%', fontSize: 10, lineHeight: 14, color: '#475569' },
+      label: { show: true, formatter: function(p){ return p.name+'\n'+p.value+unit+'\n'+p.percent.toFixed(1)+'%'; }, fontSize: 10, lineHeight: 14, color: '#475569' },
       labelLine: { length: 6, length2: 10 },
       emphasis: { itemStyle: { shadowBlur: 14, shadowColor: 'rgba(0,0,0,0.25)' } },
     }],
