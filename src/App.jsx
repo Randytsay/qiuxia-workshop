@@ -519,7 +519,7 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 100).map((r, i) => {
+                {filtered.map((r, i) => {
                   const name = (r['夥伴姓'] || '') + (r['名字'] || '')
                   return (
                     <tr key={i} className="border-b border-gray-50 hover:bg-indigo-50/30">
@@ -535,13 +535,10 @@ export default function App() {
                 {filtered.length === 0 && (
                   <tr><td colSpan="6" className="py-8 text-center text-gray-400 text-sm">暫無資料</td></tr>
                 )}
-                {filtered.length > 100 && (
-                  <tr><td colSpan="6" className="py-3 text-center text-indigo-400 text-xs">⋯ 還有 {filtered.length - 100} 位參與者</td></tr>
-                )}
               </tbody>
             </table>
           </div>
-          {filtered.length > 0 && <p className="text-xs text-gray-400 mt-2 text-right">共 {filtered.length} 位參與者（最多顯示前 100 筆）</p>}
+          {filtered.length > 0 && <p className="text-xs text-gray-400 mt-2 text-right">共 {filtered.length} 位參與者</p>}
         </div>
 
         {/* 說明 */}
