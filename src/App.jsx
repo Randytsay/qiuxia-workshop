@@ -107,12 +107,13 @@ export default function App() {
   const [rawData, setRawData] = useState([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [latestDate, setLatestDate] = useState('')
   const [filters, setFilters] = useState({
     workshopType: '',
     smallC: '',
     rank: '',
     role: '',
-    dateRange: 'all',
+    dateRange: '',  // 空字串 = 預設最新一場
   })
 
   useEffect(() => {
@@ -122,6 +123,13 @@ export default function App() {
         if (json.data) {
           setRawData(json.data)
           setLastUpdated(new Date(json.fetchedAt).toLocaleString('zh-TW'))
+          // 抓最新一場工作坊日期
+          const dates = json.data.map(r => r['參與工作坊日期']).filter(Boolean)
+          if (dates.length > 0) {
+            const latest = dates.reduce((a, b) => new Date(a) > new Date(b) ? a : b)
+            setLatestDate(latest)
+            setFilters(f => ({ ...f, dateRange: latest }))
+          }
         }
         setLoading(false)
       })
@@ -137,18 +145,11 @@ export default function App() {
       if (filters.smallC && row['所屬小C'] !== filters.smallC) return false
       if (filters.rank && row['目前聘階'] !== filters.rank) return false
       if (filters.role && row['參與者身分'] !== filters.role) return false
-      if (filters.dateRange !== 'all') {
+      if (filters.dateRange) {
         const dateStr = row['參與工作坊日期']
         if (!dateStr) return false
-        const date = new Date(dateStr)
-        const now = new Date()
-        if (filters.dateRange === '30') {
-          if ((now - date) > 30 * 86400000) return false
-        } else if (filters.dateRange === '90') {
-          if ((now - date) > 90 * 86400000) return false
-        } else if (filters.dateRange === '180') {
-          if ((now - date) > 180 * 86400000) return false
-        }
+        // 精確匹配日期（最新一場或多場選定）
+        if (dateStr !== filters.dateRange) return false
       }
       return true
     })
@@ -174,10 +175,17 @@ export default function App() {
     return Array.from(set).sort()
   }, [rawData])
 
+  // 所有可用日期（由新到舊排列）
+  const availableDates = useMemo(() => {
+    const set = new Set(rawData.map(r => r['參與工作坊日期']).filter(Boolean))
+    return Array.from(set).sort((a, b) => new Date(b) - new Date(a))
+  }, [rawData])
+
   // KPIs
   const totalRecords = filtered.length
   const uniquePersons = new Set(filtered.map(r => r['夥伴姓'] + r['名字'])).size
-  const workshopDates = new Set(filtered.map(r => r['參與工作坊日期']).filter(Boolean)).size
+  const filteredWorkshopTypes = new Set(filtered.map(r => r['請選擇這場工作坊的類別']).filter(Boolean)).size
+  const totalSessions = availableDates.length
   const repeatRate = totalRecords > 0 && uniquePersons > 0
     ? ((totalRecords / uniquePersons - 1) * 100).toFixed(1) + '%'
     : '0%'
@@ -335,8 +343,8 @@ export default function App() {
     }
   }
 
-  const clearFilters = () => setFilters({ workshopType: '', smallC: '', rank: '', role: '', dateRange: 'all' })
-  const hasActiveFilters = Object.values(filters).some(v => v !== '' && v !== 'all')
+  const clearFilters = () => setFilters({ workshopType: '', smallC: '', rank: '', role: '', dateRange: latestDate || '' })
+  const hasActiveFilters = Object.values(filters).some(v => v !== '' && v !== latestDate)
 
   if (loading) {
     return (
@@ -357,7 +365,12 @@ export default function App() {
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold mb-1">🌸 秋霞大C 工作坊統計儀表板</h1>
           <p className="text-indigo-200 text-sm">數據自動同步自 Google 試算表 · 最後更新：{lastUpdated}</p>
-          <p className="text-indigo-200 text-xs mt-1">目前顯示 <span className="font-bold text-white">{totalRecords}</span> 筆記錄（篩選後）· 原始資料共 <span className="font-bold text-white">{rawData.length}</span> 筆</p>
+          <p className="text-indigo-200 text-xs mt-1">
+            {filters.dateRange
+              ? <>📅 顯示場次：<span className="font-bold text-white">{filters.dateRange}</span> · </>
+              : <>📅 顯示全部場次 · </>}
+            <span className="font-bold text-white">{totalRecords}</span> 筆記錄 · 原始共 <span className="font-bold text-white">{rawData.length}</span> 筆
+          </p>
         </div>
       </div>
 
@@ -378,16 +391,16 @@ export default function App() {
             <SelectFilter label="職級" options={ranks} value={filters.rank} onChange={v => setFilters(f => ({ ...f, rank: v }))} />
             <SelectFilter label="參與角色" options={roles} value={filters.role} onChange={v => setFilters(f => ({ ...f, role: v }))} />
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-500">時間範圍</label>
+              <label className="text-xs font-medium text-gray-500">工作坊場次</label>
               <select
                 value={filters.dateRange}
                 onChange={e => setFilters(f => ({ ...f, dateRange: e.target.value }))}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
               >
-                <option value="all">全部時間</option>
-                <option value="30">最近 30 天</option>
-                <option value="90">最近 90 天</option>
-                <option value="180">最近 180 天</option>
+                <option value="">全部場次</option>
+                {availableDates.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -397,7 +410,7 @@ export default function App() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <KPICard title="📝 總參與人次" value={totalRecords} sub="篩選後" color="#6366f1" />
           <KPICard title="👥 獨立人數" value={uniquePersons} sub="不重複計算" color="#10b981" />
-          <KPICard title="📅 舉辦場次" value={workshopDates} sub="不同日期" color="#f59e0b" />
+          <KPICard title="🏠 參與小C" value={smallCs.length} sub={`共 ${rawData.length > 0 ? new Set(rawData.map(r => r['所屬小C'])).size : 0} 個小C`} color="#f59e0b" />
           <KPICard title="🔄 複訓率" value={repeatRate} sub="人均參加次數" color="#ec4899" />
         </div>
 
