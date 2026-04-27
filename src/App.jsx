@@ -14,8 +14,9 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { Bar, Line, Doughnut } from 'react-chartjs-2'
 import {
-  fetchDates, fetchAnalytics, fetchTrend, fetchComparison
+  fetchDates, fetchAnalytics, fetchTrend, fetchComparison, clearCache
 } from './dataService.js'
+import { AUTO_REFRESH_INTERVAL } from './dataService.js'
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement, PointElement,
@@ -542,14 +543,92 @@ export default function App() {
   const [loadingSingle, setLoadingSingle] = useState(false)
   const [loadingTrend, setLoadingTrend] = useState(false)
   const [loadingComp, setLoadingComp] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [countdown, setCountdown] = useState(AUTO_REFRESH_INTERVAL / 1000)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const compPeriodRef = useRef(compPeriod)
 
-  // Load dates on mount
+  // Keep ref in sync with state
+  useEffect(() => { compPeriodRef.current = compPeriod }, [compPeriod])
+
+  // ── Auto-refresh: countdown timer ──────────────────────────────
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) {
+          // Time's up — trigger refresh
+          handleRefresh()
+          return AUTO_REFRESH_INTERVAL / 1000
+        }
+        return c - 1
+      })
+    }, 1000)
+    return () => clearInterval(tick)
+  }, [])
+
+  function handleRefresh() {
+    setIsRefreshing(true)
+    setCountdown(AUTO_REFRESH_INTERVAL / 1000)
+    clearCache()
+    Promise.all([
+      fetchDates(),
+      selectedDate ? fetchAnalytics(selectedDate) : Promise.resolve(),
+      fetchComparison(compPeriodRef.current),
+    ]).then(([d, ad, cd]) => {
+      if (d.dates?.length) { setDates(d.dates); if (!selectedDate) setSelectedDate(d.dates[0]) }
+      if (ad) setSingleData(ad)
+      if (cd) setCompData(cd)
+      setLastUpdated(new Date())
+      setIsRefreshing(false)
+    }).catch(e => { console.error(e); setIsRefreshing(false) })
+  }
+
+  function refreshAll() {
+    setIsRefreshing(true)
+    clearCache()
+    Promise.all([
+      fetchDates(),
+      selectedDate ? fetchAnalytics(selectedDate) : Promise.resolve(),
+      trendData && trendPeriod ? fetchTrendByPeriod() : Promise.resolve(),
+      fetchComparison(compPeriodRef.current),
+    ]).then(([d, ad, td, cd]) => {
+      if (d.dates?.length) { setDates(d.dates); setSelectedDate(prev => prev || d.dates[0]) }
+      if (ad) setSingleData(ad)
+      if (td) setTrendData(td)
+      if (cd) setCompData(cd)
+      setLastUpdated(new Date())
+      setCountdown(AUTO_REFRESH_INTERVAL / 1000)
+      setIsRefreshing(false)
+    }).catch(e => { console.error(e); setIsRefreshing(false) })
+  }
+
+  function fetchTrendByPeriod() {
+    const t = new Date()
+    const y = t.getFullYear(), m = t.getMonth()
+    let start, end
+    if (trendPeriod === 'thisMonth') {
+      start = `${y}-${String(m+1).padStart(2,'0')}-01`
+      end   = `${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`
+    } else if (trendPeriod === 'lastMonth') {
+      start = `${y}-${String(m).padStart(2,'0')}-01`
+      end   = `${y}-${String(m).padStart(2,'0')}-${new Date(y,m,0).getDate()}`
+    } else {
+      const q = Math.floor(m/3)
+      start = `${y}-${String(q*3+1).padStart(2,'0')}-01`
+      const eq = new Date(y, q*3+3, 0)
+      end = `${eq.getFullYear()}-${String(eq.getMonth()+1).padStart(2,'0')}-${String(eq.getDate()).padStart(2,'0')}`
+    }
+    return fetchTrend(start, end)
+  }
+
+  // ── Initial load ────────────────────────────────────────────────
   useEffect(() => {
     fetchDates()
       .then(d => {
         if (d.dates?.length) {
           setDates(d.dates)
           setSelectedDate(d.dates[0])
+          setLastUpdated(new Date())
         }
       })
       .catch(console.error)
@@ -595,11 +674,35 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-5 py-6">
-        <h1 className="text-xl font-black flex items-center gap-2 mb-1">
-          🌸 秋霞大C 出席儀表板
-        </h1>
-        <p className="text-blue-200 text-xs">即時分析 Coring 會議狀況</p>
+      <header className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-5 py-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-black flex items-center gap-2 mb-1">
+              🌸 秋霞大C 出席儀表板
+            </h1>
+            <p className="text-blue-200 text-xs">即時分析 Coring 會議狀況</p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <button
+              onClick={refreshAll}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors text-white text-xs px-3 py-1.5 rounded-xl font-medium disabled:opacity-50"
+            >
+              <span className={isRefreshing ? 'animate-spin' : ''}>🔄</span>
+              {isRefreshing ? '更新中…' : '刷新'}
+            </button>
+            {lastUpdated && (
+              <div className="text-right">
+                <div className="text-blue-200 text-xs">
+                  {lastUpdated.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 更新
+                </div>
+                <div className="text-blue-300 text-xs mt-0.5">
+                  ⏱ {countdown}s 後自動刷新
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-5">

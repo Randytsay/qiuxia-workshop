@@ -4,6 +4,10 @@
 const SHEET_ID = '1NvM2cZEeLWScclaoO6Lf0JpSNuaBhxms9P4UdZSPJSk'
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=827982961`
 
+// ─── Config ─────────────────────────────────────────────────────
+export const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000 // 5 minutes
+export const REFRESH_COUNTDOWN     = 5 * 60        // seconds
+
 // ─── Date helpers ────────────────────────────────────────────────
 export function normalizeDateStr(raw) {
   if (!raw) return null
@@ -54,9 +58,14 @@ export function getDateRange(period) {
 let _cache = null
 let _cacheTs = 0
 
+export function clearCache() {
+  _cache = null
+  _cacheTs = 0
+}
+
 export async function getAllData() {
   const now = Date.now()
-  if (_cache && now - _cacheTs < 5 * 60 * 1000) return _cache  // 5-min cache
+  if (_cache && now - _cacheTs < AUTO_REFRESH_INTERVAL) return _cache
   const res = await fetch(CSV_URL)
   if (!res.ok) throw new Error(`CSV fetch failed: ${res.status}`)
   const text = await res.text()
