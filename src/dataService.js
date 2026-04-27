@@ -106,10 +106,15 @@ export async function fetchAnalytics(date) {
       subgroupMap[row.subgroup] = { name: row.subgroup, partners: 0, newFriends: 0, total: 0, attendees: [] }
     }
     const g = subgroupMap[row.subgroup]
+    // 1. 該夥伴本人
     g.partners++
-    g.newFriends += row.newFriends
+    g.attendees.push({ name: row.name, type: 'partner' })
+    // 2. 展開新朋友：張大山的、新朋友-1, -2, ...
+    for (let i = 1; i <= row.newFriends; i++) {
+      g.newFriends++
+      g.attendees.push({ name: `${row.name}的新朋友-${i}`, type: 'friend' })
+    }
     g.total = g.partners + g.newFriends
-    g.attendees.push({ name: row.name, type: row.newFriends > 0 ? 'friend' : 'partner' })
     totalPartners++
     totalNewFriends += row.newFriends
   }
