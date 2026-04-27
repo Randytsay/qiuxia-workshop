@@ -669,7 +669,7 @@ function WorkshopTab() {
   return (
     <div className="w-full" style={{ height: 'calc(100vh - 160px)', minHeight: '600px' }}>
       <iframe
-        src="/qiuxia-workshop/workshop.html"
+        src="/workshop.html"
         title="秋霞大C工作坊統計"
         style={{ width: '100%', height: '100%', border: 'none' }}
         sandbox="allow-scripts allow-same-origin allow-forms"
