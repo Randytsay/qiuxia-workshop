@@ -49,8 +49,8 @@ const RANK_COLORS = {
 
 // ─── 共用常數 ────────────────────────────────────────────────────
 const CHART_COLORS = [
-  '#3b82f6', '#ef4444', '#22c55e', '#f97316', '#8b5cf6',
-  '#ec4899', '#f59e0b', '#10b981', '#6366f1', '#d946ef',
+  '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4',
+  '#f97316', '#d946ef', '#6366f1', '#22c55e', '#ef4444',
 ]
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -75,8 +75,8 @@ function TopNavBtn({ label, icon, active, onClick }) {
       onClick={onClick}
       className={`flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all border-2 min-h-[36px] ${
         active
-          ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200'
-          : 'bg-white text-slate-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+          ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white border-violet-600 shadow-lg shadow-violet-200'
+          : 'bg-white text-slate-600 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
       }`}
     >
       <span className="text-sm">{icon}</span>
@@ -87,29 +87,50 @@ function TopNavBtn({ label, icon, active, onClick }) {
 
 function GrowthBadge({ rate }) {
   if (rate === null || isNaN(rate)) return <span className="text-gray-400">—</span>
-  const color = rate >= 0 ? 'text-green-600' : 'text-red-500'
-  const icon = rate >= 0 ? '▲' : '▼'
-  return <span className={`font-bold ${color}`}>{icon} {Math.abs(rate).toFixed(1)}%</span>
+  const isPos = rate >= 0
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full ${
+      isPos ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
+    }`}>
+      {isPos ? '▲' : '▼'} {Math.abs(rate).toFixed(1)}%
+    </span>
+  )
 }
 
 // ─── Stat Card ─────────────────────────────────────────────────
-function StatCard({ label, value, primary, sub, delay = 0 }) {
+function StatCard({ label, value, primary, sub, delay = 0, accent = 'violet' }) {
+  const accentMap = {
+    violet: { from: 'from-violet-600', to: 'to-purple-600', glow: 'shadow-violet-300/50', line: 'from-violet-400 via-purple-400 to-pink-400', lineDark: 'from-indigo-500 via-violet-500 to-purple-500' },
+    emerald: { from: 'from-emerald-600', to: 'to-teal-600', glow: 'shadow-emerald-300/50', line: 'from-emerald-400 via-teal-400 to-cyan-400', lineDark: 'from-teal-600 via-emerald-600 to-green-600' },
+    rose: { from: 'from-rose-600', to: 'to-pink-600', glow: 'shadow-rose-300/50', line: 'from-rose-400 via-pink-400 to-fuchsia-400', lineDark: 'from-pink-600 via-rose-600 to-red-600' },
+    amber: { from: 'from-amber-600', to: 'to-orange-600', glow: 'shadow-amber-300/50', line: 'from-amber-400 via-orange-400 to-red-400', lineDark: 'from-orange-600 via-amber-600 to-yellow-600' },
+  }
+  const c = accentMap[primary ? 'violet' : accent] || accentMap.violet
   return (
     <div
-      className={`rounded-2xl p-5 shadow-card card-hover relative overflow-hidden animate-fade-slide-up ${primary
-        ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-blue-200/50'
-        : 'bg-white border border-gray-100/80'}`}
+      className={`rounded-2xl p-5 shadow-card card-hover relative overflow-hidden animate-fade-slide-up group ${
+        primary
+          ? `bg-gradient-to-br ${c.from} ${c.to} text-white ${c.glow}`
+          : 'bg-white border border-gray-100/80'
+      }`}
       style={{ animationDelay: `${delay}ms` }}
     >
       {/* 頂部漸層裝飾線 */}
       {primary && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${c.line}`} />
       )}
       {!primary && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-300/50 via-purple-300/50 to-pink-300/50 opacity-0 group-hover:opacity-100 transition" />
+        <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${c.line} opacity-0 group-hover:opacity-100 transition`} />
+      )}
+      {/* 裝飾光暈球 */}
+      {primary && (
+        <div className={`absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10 blur-2xl`} />
+      )}
+      {!primary && (
+        <div className={`absolute top-3 right-3 w-14 h-14 rounded-full opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br ${c.from} ${c.to} blur-xl`} />
       )}
       <p className={`text-sm mb-1 font-medium tracking-wide ${primary ? 'text-white/80' : 'text-gray-400'}`}>{label}</p>
-      <p className={`text-3xl font-black tracking-tighter number-count ${primary ? '' : 'text-gray-800'}`}>{value ?? '—'}</p>
+      <p className={`text-3xl font-black tracking-tighter number-count ${primary ? '' : 'bg-gradient-to-r from-gray-800 to-gray-900 bg-clip-text text-transparent'}`}>{value ?? '—'}</p>
       {sub && <p className={`text-xs mt-1 ${primary ? 'text-white/60' : 'text-gray-400'}`}>{sub}</p>}
     </div>
   )
@@ -123,8 +144,8 @@ function TabBtn({ id, label, icon, active, onClick }) {
       onClick={onClick}
       className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl text-sm font-medium transition-all min-h-[48px] ${
         active
-          ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-          : 'text-slate-500 hover:bg-gray-100'
+          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-200'
+          : 'text-slate-500 hover:bg-gray-100 hover:text-slate-700'
       }`}
     >
       <span className="text-base">{icon}</span>
@@ -153,8 +174,8 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
   const barData = {
     labels: sorted.map(g => g.name.length > 8 ? g.name.slice(0, 8) + '…' : g.name),
     datasets: [
-      { label: '夥伴', data: sorted.map(g => g.partners), backgroundColor: '#3b82f6' },
-      { label: '新朋友', data: sorted.map(g => g.newFriends), backgroundColor: '#a5b4fc' },
+      { label: '夥伴', data: sorted.map(g => g.partners), backgroundColor: '#8b5cf6' },
+      { label: '新朋友', data: sorted.map(g => g.newFriends), backgroundColor: '#f472b6' },
     ],
   }
 
@@ -176,7 +197,7 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
         <select
           value={selectedDate}
           onChange={e => onDateChange(e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
         >
           <option value="">— 選擇日期 —</option>
           {(dates || []).map(d => <option key={d} value={d}>{fmtDate(d)}</option>)}
@@ -224,20 +245,20 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {sorted.map((g, i) => (
-                    <tr key={i} className="hover:bg-blue-50/30 transition">
+                    <tr key={i} className="hover:bg-violet-50/40 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-800">{g.name}</td>
                       <td className="px-4 py-3 text-center">{g.partners}</td>
-                      <td className="px-4 py-3 text-center text-blue-600">{g.newFriends}</td>
+                      <td className="px-4 py-3 text-center text-violet-600 font-semibold">{g.newFriends}</td>
                       <td className="px-4 py-3 text-center font-bold">{g.total}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-blue-50 font-bold">
+                <tfoot className="bg-gradient-to-r from-violet-50 to-purple-50 font-bold">
                   <tr>
                     <td className="px-4 py-3">合計</td>
                     <td className="px-4 py-3 text-center">{data.totalPartners}</td>
-                    <td className="px-4 py-3 text-center text-blue-600">{data.totalNewFriends}</td>
-                    <td className="px-4 py-3 text-center text-blue-700">{data.grandTotal}</td>
+                    <td className="px-4 py-3 text-center text-violet-600">{data.totalNewFriends}</td>
+                    <td className="px-4 py-3 text-center bg-gradient-to-r from-violet-100 to-purple-100 text-violet-700">{data.grandTotal}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -252,11 +273,11 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
                   <div key={i} className="border border-gray-100 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-bold text-gray-800">{g.name}</h4>
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">{g.attendees?.length || 0}人</span>
+                      <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full font-medium">{g.attendees?.length || 0}人</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {(g.attendees || []).map((a, j) => (
-                        <span key={j} className={`text-xs px-2.5 py-1 rounded-full font-medium ${a.type === 'friend' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-gray-100 text-gray-700'}`}>
+                        <span key={j} className={`text-xs px-2.5 py-1 rounded-full font-medium ${a.type === 'friend' ? 'bg-gradient-to-r from-violet-50 to-purple-50 text-violet-600 border border-violet-200' : 'bg-gray-100 text-gray-700'}`}>
                           {a.name}
                         </span>
                       ))}
@@ -352,8 +373,8 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
               onClick={() => onPeriodChange(b.id)}
               className={`py-2.5 rounded-xl text-sm font-medium transition-all border ${
                 trendPeriod === b.id
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                  ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white border-violet-600 shadow-sm shadow-violet-200'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
               }`}
             >
               {b.label}
@@ -363,13 +384,13 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
         <label className="block text-sm font-semibold text-gray-600 mb-3">📆 或自訂區間</label>
         <div className="space-y-2 mb-3">
           <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
           <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
         </div>
         <button
           onClick={() => onQuery(startDate, endDate)}
-          className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors"
+          className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold py-3 rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-colors shadow-sm shadow-emerald-200"
         >
           🔍 查詢趨勢
         </button>
@@ -422,7 +443,7 @@ function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
     labels: ['夥伴', '新朋友'],
     datasets: [{
       data: [data.currentPeriod.totalPartners, data.currentPeriod.totalNewFriends],
-      backgroundColor: ['#3b82f6', '#a5b4fc'],
+      backgroundColor: ['#8b5cf6', '#f472b6'],
       borderWidth: 2,
       borderColor: '#fff',
     }],
@@ -431,8 +452,8 @@ function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
   const compBarData = data ? {
     labels: ['總人數', '夥伴', '新朋友'],
     datasets: [
-      { label: data.previousPeriod.label, data: [data.previousPeriod.grandTotal, data.previousPeriod.totalPartners, data.previousPeriod.totalNewFriends], backgroundColor: '#9ca3af' },
-      { label: data.currentPeriod.label, data: [data.currentPeriod.grandTotal, data.currentPeriod.totalPartners, data.currentPeriod.totalNewFriends], backgroundColor: '#3b82f6' },
+      { label: data.previousPeriod.label, data: [data.previousPeriod.grandTotal, data.previousPeriod.totalPartners, data.previousPeriod.totalNewFriends], backgroundColor: '#d1d5db' },
+      { label: data.currentPeriod.label, data: [data.currentPeriod.grandTotal, data.currentPeriod.totalPartners, data.currentPeriod.totalNewFriends], backgroundColor: '#8b5cf6' },
     ],
   } : null
 
@@ -463,8 +484,8 @@ function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
               onClick={() => onPeriodChange(b.id)}
               className={`py-2.5 rounded-xl text-sm font-medium transition-all border ${
                 activePeriod === b.id
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                  ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white border-violet-600 shadow-sm shadow-violet-200'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
               }`}
             >
               {b.label}比較
@@ -486,23 +507,26 @@ function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
       {data && !loading && (
         <>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 mb-2">總出席人數</p>
-              <p className="text-2xl font-extrabold text-gray-800">{data.currentPeriod.grandTotal}</p>
-              <p className="text-xs text-gray-400 mt-1">{data.previousPeriod.label}: {data.previousPeriod.grandTotal}</p>
-              <div className="mt-1"><GrowthBadge rate={data.growthRates.grandTotal} /></div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-violet-500 to-purple-600 rounded-l-xl" />
+              <p className="text-xs text-gray-500 mb-2 pl-2">總出席人數</p>
+              <p className="text-2xl font-extrabold bg-gradient-to-r from-gray-800 to-gray-900 bg-clip-text text-transparent pl-2">{data.currentPeriod.grandTotal}</p>
+              <p className="text-xs text-gray-400 mt-1 pl-2">{data.previousPeriod.label}: {data.previousPeriod.grandTotal}</p>
+              <div className="mt-1 pl-2"><GrowthBadge rate={data.growthRates.grandTotal} /></div>
             </div>
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 mb-2">夥伴人數</p>
-              <p className="text-2xl font-extrabold text-gray-800">{data.currentPeriod.totalPartners}</p>
-              <p className="text-xs text-gray-400 mt-1">{data.previousPeriod.label}: {data.previousPeriod.totalPartners}</p>
-              <div className="mt-1"><GrowthBadge rate={data.growthRates.partner} /></div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-teal-500 to-emerald-600 rounded-l-xl" />
+              <p className="text-xs text-gray-500 mb-2 pl-2">夥伴人數</p>
+              <p className="text-2xl font-extrabold bg-gradient-to-r from-gray-800 to-gray-900 bg-clip-text text-transparent pl-2">{data.currentPeriod.totalPartners}</p>
+              <p className="text-xs text-gray-400 mt-1 pl-2">{data.previousPeriod.label}: {data.previousPeriod.totalPartners}</p>
+              <div className="mt-1 pl-2"><GrowthBadge rate={data.growthRates.partner} /></div>
             </div>
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 mb-2">新朋友人數</p>
-              <p className="text-2xl font-extrabold text-gray-800">{data.currentPeriod.totalNewFriends}</p>
-              <p className="text-xs text-gray-400 mt-1">{data.previousPeriod.label}: {data.previousPeriod.totalNewFriends}</p>
-              <div className="mt-1"><GrowthBadge rate={data.growthRates.newFriend} /></div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-pink-500 to-rose-600 rounded-l-xl" />
+              <p className="text-xs text-gray-500 mb-2 pl-2">新朋友人數</p>
+              <p className="text-2xl font-extrabold bg-gradient-to-r from-gray-800 to-gray-900 bg-clip-text text-transparent pl-2">{data.currentPeriod.totalNewFriends}</p>
+              <p className="text-xs text-gray-400 mt-1 pl-2">{data.previousPeriod.label}: {data.previousPeriod.totalNewFriends}</p>
+              <div className="mt-1 pl-2"><GrowthBadge rate={data.growthRates.newFriend} /></div>
             </div>
           </div>
 
@@ -769,33 +793,42 @@ function WeiHongDashboard() {
   return (
     <div className="space-y-5">
       {/* Section header */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-5 py-4 rounded-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-black flex items-center gap-2 mb-0.5">🌸 秋霞大C 出席儀表板</h2>
-            <p className="text-blue-200 text-xs">即時分析 Coring 會議狀況</p>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <button
-              onClick={refreshAll}
-              disabled={isRefreshing}
-              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors text-white text-xs px-3 py-1.5 rounded-xl font-medium disabled:opacity-50"
-            >
-              <span className={isRefreshing ? 'animate-spin' : ''}>🔄</span>
-              {isRefreshing ? '更新中…' : '刷新'}
-            </button>
-            {lastUpdated && (
-              <div className="text-right">
-                <div className="text-blue-200 text-xs">{lastUpdated.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 更新</div>
-                <div className="text-blue-300 text-xs mt-0.5">⏱ {countdown}s 後自動刷新</div>
-              </div>
-            )}
+      <div className="relative overflow-hidden">
+        {/* 彩虹底部漸層線 */}
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-rose-500" />
+        {/* 主 Header 背景 */}
+        <div className="relative bg-gradient-to-br from-slate-900 via-violet-950 to-indigo-950 text-white px-5 py-4 rounded-2xl">
+          {/* 背景裝飾光暈 */}
+          <div className="absolute -top-8 -right-8 w-40 h-40 bg-violet-600/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-fuchsia-500/10 rounded-full blur-2xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl" />
+          <div className="flex items-start justify-between relative z-10">
+            <div>
+              <h2 className="text-lg font-black flex items-center gap-2 mb-0.5">🌸 秋霞大C 出席儀表板</h2>
+              <p className="text-violet-200 text-xs">即時分析 Coring 會議狀況</p>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={refreshAll}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm transition-colors text-white text-xs px-3 py-1.5 rounded-xl font-medium disabled:opacity-50 border border-white/10"
+              >
+                <span className={isRefreshing ? 'animate-spin' : ''}>🔄</span>
+                {isRefreshing ? '更新中…' : '刷新'}
+              </button>
+              {lastUpdated && (
+                <div className="text-right">
+                  <div className="text-violet-300 text-xs">{lastUpdated.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 更新</div>
+                  <div className="text-fuchsia-300 text-xs mt-0.5">⏱ {countdown}s 後自動刷新</div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-2xl p-1.5 shadow-sm flex gap-1">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-sm shadow-violet-200/40 flex gap-1 border border-violet-100/50">
         <TabBtn id="single" label="單次會議" icon="📅" active={activeTab === 'single'} onClick={() => setActiveTab('single')} />
         <TabBtn id="trend" label="趨勢分析" icon="📈" active={activeTab === 'trend'} onClick={() => setActiveTab('trend')} />
         <TabBtn id="history" label="歷史統計" icon="📊" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />

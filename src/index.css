@@ -6,7 +6,7 @@
 
 /* ─── 全域基礎 ─────────────────────────────────────── */
 body {
-  background-color: #f8fafc;
+  background: linear-gradient(135deg, #faf5ff 0%, #f8fafc 40%, #eff6ff 100%);
   font-family: 'Noto Sans TC', 'Microsoft JhengHei', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
