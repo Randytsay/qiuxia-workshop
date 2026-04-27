@@ -171,11 +171,33 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
     ? [...data.subGroupData].sort((a, b) => b.total - a.total)
     : []
 
+  // 彩虹十色（每一個 subgroup 對應一組 夥伴/新朋友 的彩虹配對）
+  const RAINBOW = [
+    ['#8b5cf6', '#c084fc'], // 紫羅蘭
+    ['#ec4899', '#f9a8d4'], // 玫紅
+    ['#f59e0b', '#fcd34d'], // 琥珀
+    ['#10b981', '#6ee7b7'], // 翡翠
+    ['#06b6d4', '#67e8f9'], // 青色
+    ['#f97316', '#fdba74'], // 橙
+    ['#6366f1', '#a5b4fc'], // 靛藍
+    ['#14b8a6', '#5eead4'], // 綠松石
+    ['#ef4444', '#fca5a5'], // 紅
+    ['#84cc16', '#bef264'], // 青檸
+  ]
+
   const barData = {
     labels: sorted.map(g => g.name.length > 8 ? g.name.slice(0, 8) + '…' : g.name),
     datasets: [
-      { label: '夥伴', data: sorted.map(g => g.partners), backgroundColor: '#8b5cf6' },
-      { label: '新朋友', data: sorted.map(g => g.newFriends), backgroundColor: '#f472b6' },
+      {
+        label: '夥伴',
+        data: sorted.map((g, i) => g.partners),
+        backgroundColor: sorted.map((_, i) => RAINBOW[i % RAINBOW.length][0]),
+      },
+      {
+        label: '新朋友',
+        data: sorted.map((g, i) => g.newFriends),
+        backgroundColor: sorted.map((_, i) => RAINBOW[i % RAINBOW.length][1]),
+      },
     ],
   }
 
