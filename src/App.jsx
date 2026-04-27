@@ -127,7 +127,7 @@ function TabBtn({ id, label, icon, active, onClick }) {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  區塊一：韋宏大C 出席儀表板（原有功能）
+//  區塊一：秋霞大C 出席儀表板（原有功能）
 // ════════════════════════════════════════════════════════════════
 
 // ─── Single Meeting Tab ──────────────────────────────────────────
@@ -856,7 +856,7 @@ function WorkshopTab() {
 //  主程式：頂層雙儀表板導航
 // ════════════════════════════════════════════════════════════════
 
-// ─── 韋宏大C 出席儀表板（子分頁） ────────────────────────────────
+// ─── 秋霞大C 出席儀表板（子分頁） ────────────────────────────────
 function WeiHongDashboard() {
   const [activeTab, setActiveTab] = useState('single')
   const [dates, setDates] = useState([])
@@ -981,10 +981,10 @@ function WeiHongDashboard() {
 
   function handlePeriodChange(p) {
     setTrendPeriod(p)
-    handleTrendQuery(
-      p === 'thisMonth' ? new Date().toISOString().slice(0, 10) : '',
-      new Date().toISOString().slice(0, 10)
-    )
+    setLoadingTrend(true)
+    fetchTrendByPeriod()
+      .then(d => { setTrendData(d); setLoadingTrend(false); })
+      .catch(e => { console.error(e); setLoadingTrend(false); })
   }
 
   return (
@@ -993,7 +993,7 @@ function WeiHongDashboard() {
       <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-5 py-4 rounded-2xl">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-black flex items-center gap-2 mb-0.5">🌸 韋宏大C 出席儀表板</h2>
+            <h2 className="text-lg font-black flex items-center gap-2 mb-0.5">🌸 秋霞大C 出席儀表板</h2>
             <p className="text-blue-200 text-xs">即時分析 Coring 會議狀況</p>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -1055,7 +1055,7 @@ export default function App() {
           {/* Top navigation */}
           <div className="flex gap-2">
             <TopNavBtn
-              label="韋宏大C 出席"
+              label="秋霞大C 出席"
               icon="📅"
               active={topSection === 'weihong'}
               onClick={() => setTopSection('weihong')}
