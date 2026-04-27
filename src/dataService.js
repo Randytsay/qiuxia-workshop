@@ -112,7 +112,7 @@ export async function fetchAnalytics(date) {
     // 2. 展開新朋友：張大山的、新朋友-1, -2, ...
     for (let i = 1; i <= row.newFriends; i++) {
       g.newFriends++
-      g.attendees.push({ name: `${row.name}的新朋友-${i}`, type: 'friend' })
+      g.attendees.push({ name: row.newFriends === 1 ? `${row.name}的新朋友` : `${row.name}的新朋友-${i}`, type: 'friend' })
     }
     g.total = g.partners + g.newFriends
     totalPartners++
