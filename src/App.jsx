@@ -25,7 +25,7 @@ ChartJS.register(
 
 // ─── 工作坊資料（獨立 CSV） ───────────────────────────────────────
 const WORKSHOP_SHEET_ID = '1QEytkFQTYVgkwCxgcC4BKrvf9ZkC_GApJd1U6JQAnsI'
-const WORKSHOP_CSV_URL = `https://docs.google.com/spreadsheets/d/${WORKSHOP_SHEET_ID}/export?format=csv&gid=0`
+const WORKSHOP_CSV_URL = `https://docs.google.com/spreadsheets/d/${WORKSHOP_SHEET_ID}/export?format=csv&gid=348335718`
 
 const WORKSHOP_COLORS = {
   '經營工作坊': '#6366f1',
