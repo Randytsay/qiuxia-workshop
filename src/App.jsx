@@ -10,6 +10,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js'
 import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { Bar, Line, Doughnut } from 'react-chartjs-2'
@@ -20,7 +21,7 @@ import { AUTO_REFRESH_INTERVAL } from './dataService.js'
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement, PointElement,
-  ArcElement, Title, Tooltip, Legend, ChartDataLabels
+  ArcElement, Title, Tooltip, Legend, ChartDataLabels, Filler
 )
 
 // ─── 工作坊資料 ───────────────────────────────────────
@@ -695,25 +696,15 @@ function WeiHongDashboard() {
   const [loadingTrend, setLoadingTrend] = useState(false)
   const [loadingComp, setLoadingComp] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
-  const [countdown, setCountdown] = useState(AUTO_REFRESH_INTERVAL / 1000)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const compPeriodRef = useRef(compPeriod)
 
   useEffect(() => { compPeriodRef.current = compPeriod }, [compPeriod])
 
-  useEffect(() => {
-    const tick = setInterval(() => {
-      setCountdown(c => {
-        if (c <= 1) { handleRefresh(); return AUTO_REFRESH_INTERVAL / 1000 }
-        return c - 1
-      })
-    }, 1000)
-    return () => clearInterval(tick)
-  }, [])
+
 
   function handleRefresh() {
     setIsRefreshing(true)
-    setCountdown(AUTO_REFRESH_INTERVAL / 1000)
     clearCache()
     Promise.all([
       fetchDates(),
@@ -742,7 +733,6 @@ function WeiHongDashboard() {
       if (td) setTrendData(td)
       if (cd) setCompData(cd)
       setLastUpdated(new Date())
-      setCountdown(AUTO_REFRESH_INTERVAL / 1000)
       setIsRefreshing(false)
     }).catch(e => { console.error(e); setIsRefreshing(false) })
   }
@@ -841,7 +831,6 @@ function WeiHongDashboard() {
               {lastUpdated && (
                 <div className="text-right">
                   <div className="text-violet-300 text-xs">{lastUpdated.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 更新</div>
-                  <div className="text-fuchsia-300 text-xs mt-0.5">⏱ {countdown}s 後自動刷新</div>
                 </div>
               )}
             </div>

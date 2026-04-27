@@ -5,8 +5,9 @@ const SHEET_ID = '1NvM2cZEeLWScclaoO6Lf0JpSNuaBhxms9P4UdZSPJSk'
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=827982961`
 
 // ─── Config ─────────────────────────────────────────────────────
-export const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000 // 5 minutes
-export const REFRESH_COUNTDOWN     = 5 * 60        // seconds
+// ─── Config ─────────────────────────────────────────────────────
+export const AUTO_REFRESH_INTERVAL = 0 // Auto-refresh disabled
+
 
 // ─── Date helpers ────────────────────────────────────────────────
 export function normalizeDateStr(raw) {
@@ -63,6 +64,28 @@ export function clearCache() {
   _cacheTs = 0
 }
 
+function parseCSVLine(line) {
+  const result = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'; i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current); current = ''
+    } else {
+      current += ch
+    }
+  }
+  result.push(current)
+  return result
+}
+
 export async function getAllData() {
   const now = Date.now()
   if (_cache && now - _cacheTs < AUTO_REFRESH_INTERVAL) return _cache
@@ -70,8 +93,10 @@ export async function getAllData() {
   if (!res.ok) throw new Error(`CSV fetch failed: ${res.status}`)
   const text = await res.text()
   const lines = text.trim().split('\n')
+  
+  // Use robust CSV parsing
   const rows = lines.slice(1).map(line => {
-    const cols = line.split(',')
+    const cols = parseCSVLine(line)
     return {
       timestamp: cols[0] || '',
       date:      normalizeDateStr(cols[1]) || '',
@@ -131,7 +156,12 @@ export async function fetchAnalytics(date) {
 
 export async function fetchTrend(startDate, endDate) {
   const data = await getAllData()
-  const filtered = data.filter(r => r.date >= startDate && r.date <= endDate)
+  
+  // Normalize input dates (handle YYYY-MM-DD from <input type="date">)
+  const start = normalizeDateStr(startDate)
+  const end   = normalizeDateStr(endDate)
+  
+  const filtered = data.filter(r => r.date >= start && r.date <= end)
     .sort((a, b) => a.date.localeCompare(b.date))
 
   // Group by date
@@ -149,17 +179,25 @@ export async function fetchTrend(startDate, endDate) {
   const trendData = {
     labels,
     datasets: [
-      { label: '總出席', data: labels.map(d => byDate[d].partners + byDate[d].newFriends) },
-      { label: '夥伴',   data: labels.map(d => byDate[d].partners) },
-      { label: '新朋友', data: labels.map(d => byDate[d].newFriends) },
+      { label: '總出席', data: labels.map(d => byDate[d].partners + byDate[d].newFriends), fill: true },
+      { label: '夥伴',   data: labels.map(d => byDate[d].partners), fill: false },
+      { label: '新朋友', data: labels.map(d => byDate[d].newFriends), fill: false },
     ],
     subGroupDatasets: [],
   }
 
-  // Subgroup trends
-  const subgroups = [...new Set(data.map(r => r.subgroup))]
-  const dateSet = new Set(labels)
-  for (const sg of subgroups.slice(0, 6)) {
+  // Optimized Subgroup trends: Pick top 6 subgroups by total attendance
+  const sgCounts = {}
+  data.forEach(r => {
+    if (!sgCounts[r.subgroup]) sgCounts[r.subgroup] = 0
+    sgCounts[r.subgroup]++
+  })
+  const topSubgroups = Object.entries(sgCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(e => e[0])
+
+  for (const sg of topSubgroups) {
     const sgData = filtered.filter(r => r.subgroup === sg)
     const sgByDate = {}
     for (const row of sgData) {
@@ -181,15 +219,20 @@ export async function fetchTrend(startDate, endDate) {
 export async function fetchComparison(period) {
   const data = await getAllData()
   const { start: currStart, end: currEnd } = getDateRange(period)
-  const currLen = period === 'week' ? 7 : period === 'month' ? 30 : period === 'quarter' ? 90 : period === 'half' ? 180 : 365
-
-  const currStartDate = new Date()
-  currStartDate.setDate(currStartDate.getDate() - currLen)
-  const prevStart = `${currStartDate.getFullYear()}/${String(currStartDate.getMonth()+1).padStart(2,'0')}/${String(currStartDate.getDate()).padStart(2,'0')}`
-
-  const prevEndDate = new Date(currStartDate)
-  prevEndDate.setDate(prevEndDate.getDate() - 1)
-  const prevEnd = `${prevEndDate.getFullYear()}/${String(prevEndDate.getMonth()+1).padStart(2,'0')}/${String(prevEndDate.getDate()).padStart(2,'0')}`
+  
+  // Calculate Previous Period Dates Correctly
+  const cStart = new Date(currStart)
+  const cEnd   = new Date(currEnd)
+  const durationMs = cEnd.getTime() - cStart.getTime()
+  
+  const pEndObj = new Date(cStart)
+  pEndObj.setDate(pEndObj.getDate() - 1)
+  
+  const pStartObj = new Date(pEndObj.getTime() - durationMs)
+  
+  const fmt = (d) => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+  const prevStart = fmt(pStartObj)
+  const prevEnd   = fmt(pEndObj)
 
   const periodLabel = { week:'本週', month:'本月', quarter:'本季', half:'半年', year:'本年' }[period] || period
   const prevLabel  = { week:'上週', month:'上月', quarter:'上季', half:'上半年', year:'去年' }[period] || '前期'
@@ -209,8 +252,8 @@ export async function fetchComparison(period) {
   }
 
   return {
-    currentPeriod:  { ...current,  label: periodLabel },
-    previousPeriod: { ...previous, label: prevLabel },
+    currentPeriod:  { ...current,  label: periodLabel, range: `${currStart} ~ ${currEnd}` },
+    previousPeriod: { ...previous, label: prevLabel,   range: `${prevStart} ~ ${prevEnd}` },
     growthRates: {
       grandTotal: rate(current.grandTotal,  previous.grandTotal),
       partner:    rate(current.totalPartners,  previous.totalPartners),
