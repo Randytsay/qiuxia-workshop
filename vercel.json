@@ -3,12 +3,6 @@
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "framework": "vite",
-  "git": {
-    "deploymentEnabled": {
-      "main": true,
-      "gh-pages": false
-    }
-  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
@@ -16,8 +10,14 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' *"
+        }
       ]
     }
   ]
