@@ -73,13 +73,13 @@ function TopNavBtn({ label, icon, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl text-sm font-bold transition-all border-2 min-h-[52px] ${
+      className={`flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all border-2 min-h-[36px] ${
         active
           ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200'
           : 'bg-white text-slate-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
       }`}
     >
-      <span className="text-lg">{icon}</span>
+      <span className="text-sm">{icon}</span>
       <span>{label}</span>
     </button>
   )
