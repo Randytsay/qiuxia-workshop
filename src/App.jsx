@@ -96,14 +96,24 @@ function GrowthBadge({ rate }) {
 }
 
 // ─── Stat Card ─────────────────────────────────────────────────
-function StatCard({ label, value, primary, sub }) {
+function StatCard({ label, value, primary, sub, delay = 0 }) {
   return (
-    <div className={`rounded-2xl p-5 shadow-sm border ${primary
-      ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white'
-      : 'bg-white border-gray-100'}`}>
-      <p className={`text-sm mb-1 ${primary ? 'text-white/80' : 'text-gray-500'}`}>{label}</p>
-      <p className={`text-3xl font-extrabold ${primary ? '' : 'text-gray-800'}`}>{value ?? '—'}</p>
-      {sub && <p className={`text-xs mt-1 ${primary ? 'text-white/70' : 'text-gray-400'}`}>{sub}</p>}
+    <div
+      className={`rounded-2xl p-5 shadow-card card-hover relative overflow-hidden animate-fade-slide-up ${primary
+        ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-blue-200/50'
+        : 'bg-white border border-gray-100/80'}`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      {/* 頂部漸層裝飾線 */}
+      {primary && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+      )}
+      {!primary && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-300/50 via-purple-300/50 to-pink-300/50 opacity-0 group-hover:opacity-100 transition" />
+      )}
+      <p className={`text-sm mb-1 font-medium tracking-wide ${primary ? 'text-white/80' : 'text-gray-400'}`}>{label}</p>
+      <p className={`text-3xl font-black tracking-tighter number-count ${primary ? '' : 'text-gray-800'}`}>{value ?? '—'}</p>
+      {sub && <p className={`text-xs mt-1 ${primary ? 'text-white/60' : 'text-gray-400'}`}>{sub}</p>}
     </div>
   )
 }
@@ -177,18 +187,21 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12 text-gray-400 gap-3">
-          <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          載入中…
+        <div className="space-y-4 animate-fade-in">
+          <div className="grid grid-cols-3 gap-3">
+            {[0,1,2].map(i => <div key={i} className="skeleton h-24 rounded-2xl" />)}
+          </div>
+          <div className="skeleton h-72 rounded-2xl" />
+          <div className="skeleton h-48 rounded-2xl" />
         </div>
       )}
 
       {data && !loading && (
         <>
           <div className="grid grid-cols-3 gap-3">
-            <StatCard label="👥 夥伴數" value={data.totalPartners} />
-            <StatCard label="🆕 新朋友數" value={data.totalNewFriends} />
-            <StatCard label="✨ 總出席" value={data.grandTotal} primary />
+            <StatCard label="👥 夥伴數" value={data.totalPartners} delay={0} />
+            <StatCard label="🆕 新朋友數" value={data.totalNewFriends} delay={80} />
+            <StatCard label="✨ 總出席" value={data.grandTotal} primary delay={160} />
           </div>
 
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -366,9 +379,12 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12 text-gray-400 gap-3">
-          <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          載入中…
+        <div className="space-y-4 animate-fade-in">
+          <div className="grid grid-cols-3 gap-3">
+            {[0,1,2].map(i => <div key={i} className="skeleton h-24 rounded-2xl" />)}
+          </div>
+          <div className="skeleton h-72 rounded-2xl" />
+          <div className="skeleton h-48 rounded-2xl" />
         </div>
       )}
 
@@ -461,9 +477,12 @@ function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12 text-gray-400 gap-3">
-          <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          載入中…
+        <div className="space-y-4 animate-fade-in">
+          <div className="grid grid-cols-3 gap-3">
+            {[0,1,2].map(i => <div key={i} className="skeleton h-24 rounded-2xl" />)}
+          </div>
+          <div className="skeleton h-72 rounded-2xl" />
+          <div className="skeleton h-48 rounded-2xl" />
         </div>
       )}
 
@@ -531,10 +550,11 @@ function parseCSV(text) {
 
 function KPICard({ title, value, sub, color }) {
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-      <p className="text-sm text-gray-500 mb-1">{title}</p>
-      <p className="text-3xl font-bold" style={{ color }}>{value}</p>
+    <div className="bg-white rounded-2xl p-5 shadow-card card-hover relative overflow-hidden animate-fade-slide-up">
+      <p className="text-sm text-gray-400 mb-1 font-medium tracking-wide">{title}</p>
+      <p className="text-3xl font-black tracking-tighter number-count" style={{ color }}>{value}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      <div className="absolute top-0 right-0 w-16 h-16 rounded-full opacity-10" style={{ background: color, filter: 'blur(16px)', transform: 'translate(30%, -30%)' }} />
     </div>
   )
 }
@@ -722,11 +742,15 @@ function WorkshopTab() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <div className="text-4xl mb-3">📊</div>
-          <p className="text-gray-500">正在載入工作坊資料...</p>
+      <div className="space-y-4 animate-fade-in">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[0,1,2,3].map(i => <div key={i} className="skeleton h-28 rounded-2xl" />)}
         </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="skeleton h-72 rounded-2xl" />
+          <div className="skeleton h-72 rounded-2xl" />
+        </div>
+        <div className="skeleton h-48 rounded-2xl" />
       </div>
     )
   }
@@ -764,10 +788,10 @@ function WorkshopTab() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPICard title="📝 總參與人次" value={totalRecords} sub="篩選後" color="#6366f1" />
-        <KPICard title="👥 獨立人數" value={uniquePersons} sub="不重複計算" color="#10b981" />
-        <KPICard title="📅 舉辦場次" value={workshopDates} sub="不同日期" color="#f59e0b" />
-        <KPICard title="🔄 複訓率" value={repeatRate} sub="人均參加次數" color="#ec4899" />
+        <KPICard title="📝 總參與人次" value={totalRecords} sub="篩選後" color="#6366f1" delay={0} />
+        <KPICard title="👥 獨立人數" value={uniquePersons} sub="不重複計算" color="#10b981" delay={80} />
+        <KPICard title="📅 舉辦場次" value={workshopDates} sub="不同日期" color="#f59e0b" delay={160} />
+        <KPICard title="🔄 複訓率" value={repeatRate} sub="人均參加次數" color="#ec4899" delay={240} />
       </div>
 
       {/* Charts Row 1 */}
