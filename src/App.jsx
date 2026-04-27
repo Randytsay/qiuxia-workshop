@@ -23,10 +23,7 @@ ChartJS.register(
   ArcElement, Title, Tooltip, Legend, ChartDataLabels
 )
 
-// ─── 工作坊資料（獨立 CSV） ───────────────────────────────────────
-const WORKSHOP_SHEET_ID = '1QEytkFQTYVgkwCxgcC4BKrvf9ZkC_GApJd1U6JQAnsI'
-const WORKSHOP_CSV_URL = `https://docs.google.com/spreadsheets/d/${WORKSHOP_SHEET_ID}/export?format=csv&gid=348335718`
-
+// ─── 工作坊資料 ───────────────────────────────────────
 const WORKSHOP_COLORS = {
   '經營工作坊': '#6366f1',
   '招募工作坊': '#f59e0b',
@@ -575,303 +572,516 @@ function SelectFilter({ label, options, value, onChange }) {
   )
 }
 
+const WORKSHOP_SHEET_ID = '1QEytkFQTYVgkwCxgcC4BKrvf9ZkC_GApJd1U6JQAnsI'
+const WORKSHOP_API_KEY = 'v2.BYXneOcP6Bv73dvpyiE_tUZQtFxobX4KB3ruQWCMxOfveEkzVnmOwUk5ugf9H2K_QjOQRG4jxEJkONVa6oJ0K38OBygg0LtRx2lw-hF5zIU6WC9Jrz5t3rlx'
+const WORKSHOP_SHEET_NAME = '簽到記錄表'
+const WORKSHOP_CSV_URL = `https://docs.google.com/spreadsheets/d/${WORKSHOP_SHEET_ID}/export?format=csv&gid=348335718`
+
+const COLOR_GRADIENTS = [
+  ['#5470c6', '#2c3e88'],
+  ['#91cc75', '#3f8a2f'],
+  ['#fac858', '#d99c0d'],
+  ['#ee6666', '#b13939'],
+  ['#73c0de', '#3b8dad'],
+  ['#ea7ccc', '#b13e8f'],
+  ['#63D4A3', '#34A87C'],
+  ['#fc8452', '#d95b21'],
+  ['#9a60b4', '#6b3e81'],
+]
+
+function getItemStyleForChart(index, chartType = 'bar', orientation = 'vertical') {
+  const gradient = COLOR_GRADIENTS[index % COLOR_GRADIENTS.length]
+  let itemStyle = {
+    color: {
+      type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+      colorStops: [{ offset: 0, color: gradient[0] }, { offset: 1, color: gradient[1] }]
+    },
+    borderRadius: 4,
+    shadowBlur: 10,
+    shadowColor: 'rgba(0,0,0,0.1)',
+    shadowOffsetX: 0,
+    shadowOffsetY: 1,
+    borderWidth: chartType === 'rose' ? 0.5 : 0,
+    borderColor: chartType === 'rose' ? 'rgba(0,0,0,0.1)' : undefined
+  }
+  if (chartType === 'bar') {
+    itemStyle.borderRadius = orientation === 'vertical' ? [4, 4, 0, 0] : [0, 4, 4, 0]
+    itemStyle.shadowColor = 'rgba(0,0,0,0.15)'
+    itemStyle.shadowOffsetY = 2
+    if (orientation === 'horizontal') {
+      itemStyle.color.x2 = 1
+      itemStyle.color.y2 = 0
+    }
+  } else if (chartType === 'rose') {
+    itemStyle.borderRadius = 6
+  }
+  return itemStyle
+}
+
 function WorkshopTab() {
-  const [rawData, setRawData] = useState([])
+  const [allRawData, setAllRawData] = useState([])
   const [loading, setLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState(null)
-  const [filters, setFilters] = useState({
-    workshopType: '',
-    smallC: '',
-    rank: '',
-    role: '',
-    dateRange: 'all',
-  })
+  const [error, setError] = useState(null)
+  const [selectedYear, setSelectedYear] = useState('')
+  const [selectedDate, setSelectedDate] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [chartData, setChartData] = useState(null)
+  const [participantList, setParticipantList] = useState([])
+  const [isGenerating, setIsGenerating] = useState(false)
+
+  // ECharts instances refs
+  const roseRef = useRef(null)
+  const barVRef = useRef(null)
+  const barHRef = useRef(null)
 
   useEffect(() => {
-    fetch(WORKSHOP_CSV_URL + '?t=' + Date.now(), { cache: 'no-store' })
-      .then(r => r.text())
-      .then(text => {
-        const parsed = parseCSV(text)
-        setRawData(parsed)
-        setLastUpdated(new Date().toLocaleString('zh-TW'))
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error('CSV load error:', err)
-        setLoading(false)
-      })
+    fetchSheetData().then(data => {
+      setAllRawData(data)
+      setLoading(false)
+      populateDefaults(data)
+    }).catch(err => {
+      setError('讀取資料失敗：' + err.message)
+      setLoading(false)
+    })
   }, [])
 
-  const filtered = useMemo(() => {
-    return rawData.filter(row => {
-      if (filters.workshopType && row['請選擇這場工作坊的類別'] !== filters.workshopType) return false
-      if (filters.smallC && row['所屬小C'] !== filters.smallC) return false
-      if (filters.rank && row['目前聘階'] !== filters.rank) return false
-      if (filters.role && row['參與者身分'] !== filters.role) return false
-      if (filters.dateRange !== 'all') {
-        const dateStr = row['參與工作坊日期']
-        if (!dateStr) return false
-        const date = new Date(dateStr)
-        const now = new Date()
-        if (filters.dateRange === '30') { if ((now - date) > 30 * 86400000) return false }
-        else if (filters.dateRange === '90') { if ((now - date) > 90 * 86400000) return false }
-        else if (filters.dateRange === '180') { if ((now - date) > 180 * 86400000) return false }
+  // Resize charts on window resize
+  useEffect(() => {
+    const handler = () => {
+      roseRef.current?.resize()
+      barVRef.current?.resize()
+      barHRef.current?.resize()
+    }
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
+  async function fetchSheetData() {
+    const url = `https://gateway.maton.ai/google-sheets/v4/spreadsheets/${WORKSHOP_SHEET_ID}/values/${encodeURIComponent(WORKSHOP_SHEET_NAME)}!A1:Z`
+    const resp = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${WORKSHOP_API_KEY}` }
+    })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    const data = await resp.json()
+    if (data.error) throw new Error(data.error.message || 'API 錯誤')
+    return data.values || []
+  }
+
+  function populateDefaults(rows) {
+    // Extract unique years (newest first)
+    const years = new Set()
+    rows.slice(1).forEach(row => {
+      const dateStr = (row[1] || '').trim()
+      const match = dateStr.match(/^(\d{4})\//)
+      if (match) years.add(match[1])
+    })
+    const sortedYears = Array.from(years).sort((a, b) => b - a)
+    if (sortedYears.length === 0) return
+
+    const year = sortedYears[0]
+    setSelectedYear(year)
+
+    // Extract unique dates for this year (newest first)
+    const dates = new Set()
+    rows.slice(1).forEach(row => {
+      const dateStr = (row[1] || '').trim()
+      if (dateStr.startsWith(year + '/') || dateStr.startsWith(year + '-')) {
+        dates.add(dateStr)
       }
-      return true
     })
-  }, [rawData, filters])
+    const sortedDates = Array.from(dates).sort((a, b) => new Date(b) - new Date(a))
+    if (sortedDates.length === 0) return
 
-  const workshopTypes = useMemo(() => Array.from(new Set(rawData.map(r => r['請選擇這場工作坊的類別']).filter(Boolean)).values()).sort(), [rawData])
-  const smallCs = useMemo(() => Array.from(new Set(rawData.map(r => r['所屬小C']).filter(Boolean)).values()).sort(), [rawData])
-  const ranks = useMemo(() => Array.from(new Set(rawData.map(r => r['目前聘階']).filter(Boolean)).values()).sort(), [rawData])
-  const roles = useMemo(() => Array.from(new Set(rawData.map(r => r['參與者身分']).filter(Boolean)).values()).sort(), [rawData])
+    const date = sortedDates[0]
+    setSelectedDate(date)
 
-  const totalRecords = filtered.length
-  const uniquePersons = useMemo(() => new Set(filtered.map(r => r['夥伴姓'] + r['名字'])).size, [filtered])
-  const workshopDates = useMemo(() => new Set(filtered.map(r => r['參與工作坊日期']).filter(Boolean)).size, [filtered])
-  const repeatRate = totalRecords > 0 && uniquePersons > 0 ? ((totalRecords / uniquePersons - 1) * 100).toFixed(1) + '%' : '0%'
-
-  const monthlyData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const d = r['參與工作坊日期']
-      if (!d) return
-      const m = d.substring(0, 7)
-      map[m] = (map[m] || 0) + 1
+    // Extract categories for this date
+    const cats = new Set()
+    rows.slice(1).forEach(row => {
+      if ((row[1] || '').trim() === date) {
+        const cat = (row[6] || '').trim()
+        if (cat) cats.add(cat)
+      }
     })
-    const sorted = Object.keys(map).sort()
-    return {
-      labels: sorted,
-      datasets: [{ label: '參與人次', data: sorted.map(k => map[k]), backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 6 }]
-    }
-  }, [filtered])
+    const sortedCats = Array.from(cats)
+    if (sortedCats.length === 0) return
 
-  const workshopTypeData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const t = r['請選擇這場工作坊的類別'] || '未知'
-      map[t] = (map[t] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: sorted.map(([k]) => WORKSHOP_COLORS[k] || '#94a3b8'), borderWidth: 0 }]
-    }
-  }, [filtered])
-
-  const smallCData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const c = r['所屬小C'] || '未知'
-      map[c] = (map[c] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10)
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{ label: '參與人次', data: sorted.map(([, v]) => v), backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 6 }]
-    }
-  }, [filtered])
-
-  const topAttendeesData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const name = (r['夥伴姓'] || '') + (r['名字'] || '')
-      if (!name) return
-      map[name] = (map[name] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10)
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{ label: '參加次數', data: sorted.map(([, v]) => v), backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 6 }]
-    }
-  }, [filtered])
-
-  const rankData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const t = r['目前聘階'] || '未知'
-      map[t] = (map[t] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: sorted.map(([k]) => RANK_COLORS[k] || '#94a3b8'), borderWidth: 0 }]
-    }
-  }, [filtered])
-
-  const roleData = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const t = r['參與者身分'] || '未知'
-      map[t] = (map[t] || 0) + 1
-    })
-    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
-    return {
-      labels: sorted.map(([k]) => k),
-      datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899'], borderWidth: 0 }]
-    }
-  }, [filtered])
-
-  const recentSessions = useMemo(() => {
-    const map = {}
-    filtered.forEach(r => {
-      const d = r['參與工作坊日期']
-      const t = r['請選擇這場工作坊的類別'] || ''
-      if (!d) return
-      if (!map[d] || map[d].type !== t) { map[d] = { date: d, type: t, count: 0, names: [] } }
-      map[d].count++
-      const name = (r['夥伴姓'] || '') + (r['名字'] || '')
-      if (name) map[d].names.push(name)
-    })
-    return Object.values(map).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10)
-  }, [filtered])
-
-  const chartOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    setSelectedCategory(sortedCats[0])
+    // Auto-generate for the latest workshop
+    setTimeout(() => generateForWorkshop(year, date, sortedCats[0], rows), 100)
   }
 
-  const doughnutOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } }
+  function handleYearChange(year) {
+    setSelectedYear(year)
+    setSelectedDate('')
+    setSelectedCategory('')
+    setChartData(null)
+    setParticipantList([])
+    if (!year) return
+
+    const dates = new Set()
+    allRawData.slice(1).forEach(row => {
+      const dateStr = (row[1] || '').trim()
+      if (dateStr.startsWith(year + '/') || dateStr.startsWith(year + '-')) {
+        dates.add(dateStr)
+      }
+    })
+    const sortedDates = Array.from(dates).sort((a, b) => new Date(b) - new Date(a))
+    if (sortedDates.length > 0) {
+      setSelectedDate(sortedDates[0])
+      handleDateChange(sortedDates[0], sortedDates)
+    }
   }
 
-  const clearFilters = () => setFilters({ workshopType: '', smallC: '', rank: '', role: '', dateRange: 'all' })
-  const hasActiveFilters = Object.values(filters).some(v => v !== '' && v !== 'all')
+  function handleDateChange(date, dateListOverride) {
+    setSelectedDate(date)
+    setSelectedCategory('')
+    setChartData(null)
+    setParticipantList([])
+    if (!date) return
+
+    const cats = new Set()
+    allRawData.slice(1).forEach(row => {
+      if ((row[1] || '').trim() === date) {
+        const cat = (row[6] || '').trim()
+        if (cat) cats.add(cat)
+      }
+    })
+    const sortedCats = Array.from(cats)
+    if (sortedCats.length > 0) {
+      setSelectedCategory(sortedCats[0])
+      setTimeout(() => generateForWorkshop(selectedYear, date, sortedCats[0]), 100)
+    }
+  }
+
+  function handleCategoryChange(cat) {
+    setSelectedCategory(cat)
+    if (cat && selectedYear && selectedDate) {
+      generateForWorkshop(selectedYear, selectedDate, cat)
+    } else {
+      setChartData(null)
+      setParticipantList([])
+      clearCharts()
+    }
+  }
+
+  function generateForWorkshop(year, date, category, rowsOverride) {
+    const rows = rowsOverride || allRawData
+    setIsGenerating(true)
+    clearCharts()
+    setParticipantList([])
+
+    const filtered = rows.slice(1).filter(row => {
+      const rowDate = (row[1] || '').trim()
+      const rowCat = (row[6] || '').trim()
+      return rowDate === date && rowCat === category
+    })
+
+    const statsMap = {}
+    const participants = []
+    filtered.forEach(row => {
+      const surname = (row[2] || '').trim()
+      const givenName = (row[3] || '').trim()
+      const name = surname + givenName
+      const xiaoC = (row[8] || '').trim()
+      const area = (row[4] || '').trim()
+      const rank = (row[5] || '').trim()
+      const role = (row[7] || '').trim()
+      if (xiaoC) {
+        statsMap[xiaoC] = (statsMap[xiaoC] || 0) + 1
+      }
+      participants.push({ name, xiaoCName: xiaoC, area, rank, role })
+    })
+
+    const statsData = Object.entries(statsMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+
+    setChartData(statsData)
+    setParticipantList(participants)
+    renderCharts(statsData, date, category)
+    setIsGenerating(false)
+  }
+
+  function clearCharts() {
+    const placeholderText = '請選擇條件並點擊「生成統計圖與名單」'
+    const placeholderOption = {
+      title: { text: placeholderText, left: 'center', top: 'center', textStyle: { color: '#b0b0b0', fontSize: 14 } }
+    }
+    roseRef.current?.setOption(placeholderOption, true)
+    barVRef.current?.setOption(placeholderOption, true)
+    barHRef.current?.setOption(placeholderOption, true)
+  }
+
+  function renderCharts(statsData, date, category) {
+    const noDataOption = {
+      title: { text: '無符合條件的統計數據', left: 'center', top: 'center', textStyle: { color: '#888', fontSize: 16 } }
+    }
+    if (!statsData || statsData.length === 0) {
+      roseRef.current?.setOption(noDataOption, true)
+      barVRef.current?.setOption(noDataOption, true)
+      barHRef.current?.setOption(noDataOption, true)
+      return
+    }
+
+    let total = statsData.reduce((s, i) => s + i.value, 0)
+    const commonSubtext = `${date} - ${category}`
+    const titleSuffixWithTotal = `（共 ${total} 人）`
+    const baseTitleStyle = {
+      left: 'center',
+      textStyle: { fontSize: 16, fontWeight: '600' },
+      subtextStyle: { fontSize: 12, color: '#555', lineHeight: 18 }
+    }
+
+    // Rose Chart
+    roseRef.current?.setOption({
+      title: { ...baseTitleStyle, text: `各小C參與人數 ${titleSuffixWithTotal}`, subtext: commonSubtext },
+      tooltip: { trigger: 'item', formatter: params => `${params.name}: ${params.value}人 (${params.percent.toFixed(1)}%)` },
+      series: [{
+        name: '參與人數', type: 'pie', radius: '65%', center: ['50%', '58%'],
+        roseType: 'area',
+        data: statsData.map((item, index) => ({
+          name: item.name, value: item.value,
+          itemStyle: getItemStyleForChart(index, 'rose')
+        })),
+        label: {
+          show: true,
+          formatter: p => `${p.name}\n${p.value}人\n(${p.percent.toFixed(1)}%)`,
+          minMargin: 5, edgeDistance: '5%', lineHeight: 15, fontSize: 10
+        },
+        labelLine: { smooth: 0.2, length: 8, length2: 12 },
+        emphasis: { itemStyle: { shadowBlur: 15, shadowColor: 'rgba(0,0,0,0.3)' } }
+      }]
+    }, true)
+
+    // Vertical Bar
+    barVRef.current?.setOption({
+      title: { ...baseTitleStyle, text: `各小C參與人數 ${titleSuffixWithTotal}`, subtext: commonSubtext },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '3%', right: '4%', bottom: '12%', top: '30%', containLabel: true },
+      xAxis: {
+        type: 'category', data: statsData.map(i => i.name),
+        axisLabel: { interval: 0, rotate: statsData.length > 5 ? 30 : 0, fontSize: 11, margin: 10 }
+      },
+      yAxis: { type: 'value', name: '人數', nameTextStyle: { fontSize: 11, padding: [0, 0, 0, 30] } },
+      series: [{
+        name: '參與人數', type: 'bar', barWidth: '55%',
+        data: statsData.map((item, index) => ({
+          value: item.value,
+          itemStyle: getItemStyleForChart(index, 'bar', 'vertical')
+        })),
+        label: { show: true, position: 'top', formatter: p => p.value + '人', fontSize: 10, color: '#444' }
+      }]
+    }, true)
+
+    // Horizontal Bar
+    barHRef.current?.setOption({
+      title: { ...baseTitleStyle, text: `各小C參與人數 ${titleSuffixWithTotal}`, subtext: commonSubtext },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '12%', right: '15%', bottom: '3%', top: '30%', containLabel: true },
+      xAxis: { type: 'value', name: '人數', nameTextStyle: { fontSize: 11 } },
+      yAxis: {
+        type: 'category', data: statsData.map(i => i.name),
+        axisLabel: { interval: 0, fontSize: 11, margin: 10 }
+      },
+      series: [{
+        name: '參與人數', type: 'bar', barWidth: '55%',
+        data: statsData.map((item, index) => ({
+          value: item.value,
+          itemStyle: getItemStyleForChart(index, 'bar', 'horizontal')
+        })),
+        label: { show: true, position: 'right', formatter: p => p.value + '人', fontSize: 10, color: '#444' }
+      }]
+    }, true)
+  }
+
+  // Derive dropdown options from allRawData
+  const yearOptions = useMemo(() => {
+    const years = new Set()
+    allRawData.slice(1).forEach(row => {
+      const dateStr = (row[1] || '').trim()
+      const match = dateStr.match(/^(\d{4})\//)
+      if (match) years.add(match[1])
+    })
+    return Array.from(years).sort((a, b) => b - a)
+  }, [allRawData])
+
+  const dateOptions = useMemo(() => {
+    if (!selectedYear) return []
+    const dates = new Set()
+    allRawData.slice(1).forEach(row => {
+      const dateStr = (row[1] || '').trim()
+      if (dateStr.startsWith(selectedYear + '/') || dateStr.startsWith(selectedYear + '-')) {
+        dates.add(dateStr)
+      }
+    })
+    return Array.from(dates).sort((a, b) => new Date(b) - new Date(a))
+  }, [allRawData, selectedYear])
+
+  const categoryOptions = useMemo(() => {
+    if (!selectedDate) return []
+    const cats = new Set()
+    allRawData.slice(1).forEach(row => {
+      if ((row[1] || '').trim() === selectedDate) {
+        const cat = (row[6] || '').trim()
+        if (cat) cats.add(cat)
+      }
+    })
+    return Array.from(cats)
+  }, [allRawData, selectedDate])
+
+  const canGenerate = !!(selectedYear && selectedDate && selectedCategory)
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-fade-in">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[0,1,2,3].map(i => <div key={i} className="skeleton h-28 rounded-2xl" />)}
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="loader mx-auto" style={{ width: 40, height: 40, borderWidth: 4, borderColor: '#f1f5f9', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <p className="mt-4 text-gray-500">正在讀取工作坊資料...</p>
         </div>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="skeleton h-72 rounded-2xl" />
-          <div className="skeleton h-72 rounded-2xl" />
-        </div>
-        <div className="skeleton h-48 rounded-2xl" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+        <p className="text-red-600 font-semibold">❌ {error}</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
+      {/* Controls */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-700 flex items-center gap-2">🔍 篩選器</h2>
-          {hasActiveFilters && (
-            <button onClick={clearFilters} className="text-xs text-indigo-600 hover:underline">清除所有篩選</button>
-          )}
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <SelectFilter label="工作坊類別" options={workshopTypes} value={filters.workshopType} onChange={v => setFilters(f => ({ ...f, workshopType: v }))} />
-          <SelectFilter label="所屬小C" options={smallCs} value={filters.smallC} onChange={v => setFilters(f => ({ ...f, smallC: v }))} />
-          <SelectFilter label="職級" options={ranks} value={filters.rank} onChange={v => setFilters(f => ({ ...f, rank: v }))} />
-          <SelectFilter label="參與角色" options={roles} value={filters.role} onChange={v => setFilters(f => ({ ...f, role: v }))} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500">時間範圍</label>
+            <label className="text-xs font-medium text-gray-500">選擇年份</label>
             <select
-              value={filters.dateRange}
-              onChange={e => setFilters(f => ({ ...f, dateRange: e.target.value }))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              value={selectedYear}
+              onChange={e => handleYearChange(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
-              <option value="all">全部時間</option>
-              <option value="30">最近 30 天</option>
-              <option value="90">最近 90 天</option>
-              <option value="180">最近 180 天</option>
+              <option value="">請選擇年份</option>
+              {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500">工作坊日期</label>
+            <select
+              value={selectedDate}
+              onChange={e => handleDateChange(e.target.value)}
+              disabled={!selectedYear}
+              className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-gray-100 disabled:text-gray-400"
+            >
+              <option value="">請選擇日期</option>
+              {dateOptions.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500">工作坊類別</label>
+            <select
+              value={selectedCategory}
+              onChange={e => handleCategoryChange(e.target.value)}
+              disabled={!selectedDate}
+              className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-gray-100 disabled:text-gray-400"
+            >
+              <option value="">請選擇類別</option>
+              {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
+        <button
+          onClick={() => generateForWorkshop(selectedYear, selectedDate, selectedCategory)}
+          disabled={!canGenerate || isGenerating}
+          className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {isGenerating ? (
+            <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />生成中...</>
+          ) : '📊 生成統計圖與名單'}
+        </button>
+        {chartData && (
+          <p className="text-xs text-green-600 mt-2 font-medium">
+            ✅ 已載入：{selectedDate} {selectedCategory}（共 {chartData.reduce((s, i) => s + i.value, 0)} 人）
+          </p>
+        )}
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPICard title="📝 總參與人次" value={totalRecords} sub="篩選後" color="#6366f1" delay={0} />
-        <KPICard title="👥 獨立人數" value={uniquePersons} sub="不重複計算" color="#10b981" delay={80} />
-        <KPICard title="📅 舉辦場次" value={workshopDates} sub="不同日期" color="#f59e0b" delay={160} />
-        <KPICard title="🔄 複訓率" value={repeatRate} sub="人均參加次數" color="#ec4899" delay={240} />
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid md:grid-cols-2 gap-6">
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* Rose Chart */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-700 mb-4">📈 月份參與趨勢</h3>
-          <div className="h-52">
-            {monthlyData.labels.length > 0
-              ? <Bar data={monthlyData} options={chartOptions} />
-              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-semibold text-gray-700">🌹 玫瑰圖</h3>
           </div>
+          <div ref={roseRef} style={{ width: '100%', height: 360 }} />
         </div>
+        {/* Vertical Bar */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-700 mb-4">🥧 工作坊類別分布</h3>
-          <div className="h-52">
-            {workshopTypeData.labels.length > 0
-              ? <Doughnut data={workshopTypeData} options={doughnutOptions} />
-              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-          </div>
+          <h3 className="font-semibold text-gray-700 mb-3">📊 柱狀圖</h3>
+          <div ref={barVRef} style={{ width: '100%', height: 360 }} />
         </div>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid md:grid-cols-2 gap-6">
+        {/* Horizontal Bar */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-700 mb-4">🏠 小C參與排行 TOP10</h3>
-          <div className="h-52">
-            {smallCData.labels.length > 0
-              ? <Bar data={smallCData} options={chartOptions} />
-              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-700 mb-4">⭐ 出席王 TOP10</h3>
-          <div className="h-52">
-            {topAttendeesData.labels.length > 0
-              ? <Bar data={topAttendeesData} options={chartOptions} />
-              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-          </div>
+          <h3 className="font-semibold text-gray-700 mb-3">📊 橫條圖</h3>
+          <div ref={barHRef} style={{ width: '100%', height: 360 }} />
         </div>
       </div>
 
-      {/* Charts Row 3 */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-700 mb-4">🏆 職級分布</h3>
-          <div className="h-52">
-            {rankData.labels.length > 0
-              ? <Doughnut data={rankData} options={doughnutOptions} />
-              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
+      {/* Participant Table */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          👥 參與者詳細名單
+          {participantList.length > 0 && (
+            <span className="text-xs bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5 font-medium">
+              {participantList.length} 人
+            </span>
+          )}
+        </h3>
+        {participantList.length === 0 ? (
+          <p className="text-center text-gray-400 py-8">請選擇條件並點擊「生成統計圖與名單」</p>
+        ) : (
+          <div className="overflow-x-auto max-h-96 overflow-y-auto border border-gray-100 rounded-lg">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600 border-b">名字</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600 border-b">區域</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600 border-b">聘階</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600 border-b">身份</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  let currentXiaoC = null
+                  return participantList.map((p, i) => {
+                    const showHeader = p.xiaoCName !== currentXiaoC
+                    if (p.xiaoCName !== currentXiaoC) currentXiaoC = p.xiaoCName
+                    return (
+                      <><tr key={'header-' + i} className="bg-green-50">
+                        <td colSpan={4} className="px-4 py-2 font-bold text-gray-700 text-xs border-t-2 border-gray-300">
+                          🏠 {currentXiaoC}
+                        </td>
+                      </tr>
+                      <tr key={'row-' + i} className="hover:bg-gray-50 border-b border-gray-50">
+                        <td className="px-4 py-2.5 font-medium">{p.name || '-'}</td>
+                        <td className="px-4 py-2.5 text-gray-600">{p.area || '-'}</td>
+                        <td className="px-4 py-2.5 text-gray-600">{p.rank || '-'}</td>
+                        <td className="px-4 py-2.5 text-gray-600">{p.role || '-'}</td>
+                      </tr></>
+                    )
+                  })
+                })()}
+              </tbody>
+            </table>
           </div>
-        </div>
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-700 mb-4">🎭 角色分布</h3>
-          <div className="h-52">
-            {roleData.labels.length > 0
-              ? <Doughnut data={roleData} options={doughnutOptions} />
-              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
-          <h3 className="font-semibold text-gray-700 mb-4">📋 最近場次</h3>
-          <div className="overflow-y-auto h-52 space-y-2">
-            {recentSessions.map((s, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs border-b border-gray-50 pb-2">
-                <span className="bg-indigo-100 text-indigo-700 rounded px-1.5 py-0.5 font-medium whitespace-nowrap">{s.date}</span>
-                <span className="text-gray-600 whitespace-nowrap">{s.type}</span>
-                <span className="text-gray-400 ml-auto">{s.count}人</span>
-              </div>
-            ))}
-            {recentSessions.length === 0 && <p className="text-gray-400 text-xs text-center py-8">暫無資料</p>}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Footer note */}
-      <div className="text-center text-xs text-gray-400">
-        <p>📌 工作坊資料：Google 試算表（每次開啟自動抓最新）| 秋霞大C教育組</p>
-        <p className="mt-1">篩選不改變原始資料，僅影響本頁顯示範圍 · 最後更新：{lastUpdated}</p>
-      </div>
+      <style>{`
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      `}</style>
     </div>
   )
 }
