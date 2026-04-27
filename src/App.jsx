@@ -14,7 +14,7 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { Bar, Line, Doughnut } from 'react-chartjs-2'
 import {
-  fetchDates, fetchAnalytics, fetchTrend, fetchComparison, clearCache
+  fetchDates, fetchAnalytics, fetchTrend, fetchComparison, clearCache,
 } from './dataService.js'
 import { AUTO_REFRESH_INTERVAL } from './dataService.js'
 
@@ -23,6 +23,34 @@ ChartJS.register(
   ArcElement, Title, Tooltip, Legend, ChartDataLabels
 )
 
+// ─── 工作坊資料（獨立 CSV） ───────────────────────────────────────
+const WORKSHOP_SHEET_ID = '1QEytkFQTYVgkwCxgcC4BKrvf9ZkC_GApJd1U6JQAnsI'
+const WORKSHOP_CSV_URL = `https://docs.google.com/spreadsheets/d/${WORKSHOP_SHEET_ID}/export?format=csv&gid=0`
+
+const WORKSHOP_COLORS = {
+  '經營工作坊': '#6366f1',
+  '招募工作坊': '#f59e0b',
+  '領導工作坊': '#10b981',
+  '產品工作坊': '#ec4899',
+  'AI工作坊': '#8b5cf6',
+  '產品&AI工作坊': '#06b6d4',
+  '主題工作坊': '#f97316',
+  '主題式工作坊': '#f97316',
+  '讀書會': '#84cc16',
+  '聯合小C': '#0ea5e9',
+  '其他工作坊': '#64748b',
+}
+
+const RANK_COLORS = {
+  'UFO超連鎖店主': '#fbbf24',
+  'SEC資深經理級': '#f59e0b',
+  'MC以上': '#ef4444',
+  'MC主管經理級': '#ec4899',
+  'EC經理級': '#8b5cf6',
+  'C助理級': '#6366f1',
+}
+
+// ─── 共用常數 ────────────────────────────────────────────────────
 const CHART_COLORS = [
   '#3b82f6', '#ef4444', '#22c55e', '#f97316', '#8b5cf6',
   '#ec4899', '#f59e0b', '#10b981', '#6366f1', '#d946ef',
@@ -43,9 +71,21 @@ function fmtDateShort(d) {
   } catch { return d }
 }
 
-function fmtInputDate(d) {
-  const [y, mo, day] = d.split('/')
-  return `${y}-${String(mo).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+// ─── 頂層導航按鈕 ────────────────────────────────────────────────
+function TopNavBtn({ label, icon, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl text-sm font-bold transition-all border-2 min-h-[52px] ${
+        active
+          ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200'
+          : 'bg-white text-slate-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+      }`}
+    >
+      <span className="text-lg">{icon}</span>
+      <span>{label}</span>
+    </button>
+  )
 }
 
 function GrowthBadge({ rate }) {
@@ -86,6 +126,10 @@ function TabBtn({ id, label, icon, active, onClick }) {
   )
 }
 
+// ════════════════════════════════════════════════════════════════
+//  區塊一：韋宏大C 出席儀表板（原有功能）
+// ════════════════════════════════════════════════════════════════
+
 // ─── Single Meeting Tab ──────────────────────────────────────────
 function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
   const barChartRef = useRef(null)
@@ -102,16 +146,8 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
   const barData = {
     labels: sorted.map(g => g.name.length > 8 ? g.name.slice(0, 8) + '…' : g.name),
     datasets: [
-      {
-        label: '夥伴',
-        data: sorted.map(g => g.partners),
-        backgroundColor: '#3b82f6',
-      },
-      {
-        label: '新朋友',
-        data: sorted.map(g => g.newFriends),
-        backgroundColor: '#a5b4fc',
-      },
+      { label: '夥伴', data: sorted.map(g => g.partners), backgroundColor: '#3b82f6' },
+      { label: '新朋友', data: sorted.map(g => g.newFriends), backgroundColor: '#a5b4fc' },
     ],
   }
 
@@ -121,36 +157,22 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
     maintainAspectRatio: false,
     plugins: {
       legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'rect' } },
-      datalabels: {
-        color: '#fff',
-        font: { weight: 'bold', size: 11 },
-        anchor: 'center',
-        align: 'center',
-        formatter: v => v > 0 ? v : '',
-      },
+      datalabels: { color: '#fff', font: { weight: 'bold', size: 11 }, anchor: 'center', align: 'center', formatter: v => v > 0 ? v : '' },
     },
-    scales: {
-      x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } },
-      y: { stacked: true, grid: { display: false } },
-    },
+    scales: { x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } }, y: { stacked: true, grid: { display: false } } },
   }
 
   return (
     <div className="space-y-5">
-      {/* Date selector */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <label className="block text-sm font-semibold text-gray-600 mb-3">
-          📅 依簽到日期查詢
-        </label>
+        <label className="block text-sm font-semibold text-gray-600 mb-3">📅 依簽到日期查詢</label>
         <select
           value={selectedDate}
           onChange={e => onDateChange(e.target.value)}
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
           <option value="">— 選擇日期 —</option>
-          {(dates || []).map(d => (
-            <option key={d} value={d}>{fmtDate(d)}</option>
-          ))}
+          {(dates || []).map(d => <option key={d} value={d}>{fmtDate(d)}</option>)}
         </select>
       </div>
 
@@ -163,14 +185,12 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
 
       {data && !loading && (
         <>
-          {/* KPI cards */}
           <div className="grid grid-cols-3 gap-3">
             <StatCard label="👥 夥伴數" value={data.totalPartners} />
             <StatCard label="🆕 新朋友數" value={data.totalNewFriends} />
             <StatCard label="✨ 總出席" value={data.grandTotal} primary />
           </div>
 
-          {/* Bar chart */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <h3 className="text-sm font-semibold text-gray-600 mb-3">📊 各小C出席分佈</h3>
             <div className="relative" style={{ height: Math.max(300, sorted.length * 52 + 80) }}>
@@ -178,7 +198,6 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
             </div>
           </div>
 
-          {/* Details table */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-700">📋 各小C出席詳情</h3>
@@ -215,7 +234,6 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
             </div>
           </div>
 
-          {/* Attendee cards */}
           {sorted.length > 0 && (
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h3 className="text-sm font-semibold text-gray-600 mb-4">👥 出席夥伴名單</h3>
@@ -224,20 +242,11 @@ function SingleTab({ dates, selectedDate, onDateChange, data, loading }) {
                   <div key={i} className="border border-gray-100 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-bold text-gray-800">{g.name}</h4>
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-                        {g.attendees?.length || 0}人
-                      </span>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">{g.attendees?.length || 0}人</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {(g.attendees || []).map((a, j) => (
-                        <span
-                          key={j}
-                          className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                            a.type === 'friend'
-                              ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}
-                        >
+                        <span key={j} className={`text-xs px-2.5 py-1 rounded-full font-medium ${a.type === 'friend' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-gray-100 text-gray-700'}`}>
                           {a.name}
                         </span>
                       ))}
@@ -306,14 +315,8 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
   const lineOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top', labels: { usePointStyle: true } },
-      datalabels: { display: false },
-    },
-    scales: {
-      x: { grid: { display: false } },
-      y: { beginAtZero: true },
-    },
+    plugins: { legend: { position: 'top', labels: { usePointStyle: true } }, datalabels: { display: false } },
+    scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
   }
 
   const subGroupData = data?.trendData?.subGroupDatasets?.slice(0, 6) || []
@@ -330,7 +333,6 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
 
   return (
     <div className="space-y-5">
-      {/* Controls */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <label className="block text-sm font-semibold text-gray-600 mb-3">⚡ 快速選擇</label>
         <div className="grid grid-cols-3 gap-2 mb-4">
@@ -416,26 +418,15 @@ function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
   const compBarData = data ? {
     labels: ['總人數', '夥伴', '新朋友'],
     datasets: [
-      {
-        label: data.previousPeriod.label,
-        data: [data.previousPeriod.grandTotal, data.previousPeriod.totalPartners, data.previousPeriod.totalNewFriends],
-        backgroundColor: '#9ca3af',
-      },
-      {
-        label: data.currentPeriod.label,
-        data: [data.currentPeriod.grandTotal, data.currentPeriod.totalPartners, data.currentPeriod.totalNewFriends],
-        backgroundColor: '#3b82f6',
-      },
+      { label: data.previousPeriod.label, data: [data.previousPeriod.grandTotal, data.previousPeriod.totalPartners, data.previousPeriod.totalNewFriends], backgroundColor: '#9ca3af' },
+      { label: data.currentPeriod.label, data: [data.currentPeriod.grandTotal, data.currentPeriod.totalPartners, data.currentPeriod.totalNewFriends], backgroundColor: '#3b82f6' },
     ],
   } : null
 
   const barOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top' },
-      datalabels: { display: false },
-    },
+    plugins: { legend: { position: 'top' }, datalabels: { display: false } },
     scales: { y: { beginAtZero: true } },
   }
 
@@ -444,27 +435,16 @@ function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
     maintainAspectRatio: false,
     plugins: {
       legend: { position: 'bottom' },
-      datalabels: {
-        color: '#fff',
-        font: { weight: 'bold', size: 13 },
-        formatter: v => v > 0 ? v : '',
-      },
+      datalabels: { color: '#fff', font: { weight: 'bold', size: 13 }, formatter: v => v > 0 ? v : '' },
     },
   }
 
   return (
     <div className="space-y-5">
-      {/* Period selector */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <label className="block text-sm font-semibold text-gray-600 mb-3">📊 選擇比較區間</label>
         <div className="grid grid-cols-5 gap-2">
-          {[
-            { id: 'week', label: '週' },
-            { id: 'month', label: '月' },
-            { id: 'quarter', label: '季' },
-            { id: 'half', label: '半年' },
-            { id: 'year', label: '年' },
-          ].map(b => (
+          {[{ id: 'week', label: '週' }, { id: 'month', label: '月' }, { id: 'quarter', label: '季' }, { id: 'half', label: '半年' }, { id: 'year', label: '年' }].map(b => (
             <button
               key={b.id}
               onClick={() => onPeriodChange(b.id)}
@@ -530,8 +510,354 @@ function ComparisonTab({ data, loading, onPeriodChange, activePeriod }) {
   )
 }
 
-// ─── Main App ────────────────────────────────────────────────────
-export default function App() {
+// ════════════════════════════════════════════════════════════════
+//  區塊二：工作坊統計儀表板
+// ════════════════════════════════════════════════════════════════
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n')
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+  const rows = []
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
+    if (values.length >= headers.length) {
+      const row = {}
+      headers.forEach((h, idx) => { row[h] = values[idx] || '' })
+      rows.push(row)
+    }
+  }
+  return rows
+}
+
+function KPICard({ title, value, sub, color }) {
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <p className="text-sm text-gray-500 mb-1">{title}</p>
+      <p className="text-3xl font-bold" style={{ color }}>{value}</p>
+      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+    </div>
+  )
+}
+
+function SelectFilter({ label, options, value, onChange }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-gray-500">{label}</label>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      >
+        <option value="">全部</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  )
+}
+
+function WorkshopTab() {
+  const [rawData, setRawData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [filters, setFilters] = useState({
+    workshopType: '',
+    smallC: '',
+    rank: '',
+    role: '',
+    dateRange: 'all',
+  })
+
+  useEffect(() => {
+    fetch(WORKSHOP_CSV_URL + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.text())
+      .then(text => {
+        const parsed = parseCSV(text)
+        setRawData(parsed)
+        setLastUpdated(new Date().toLocaleString('zh-TW'))
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error('CSV load error:', err)
+        setLoading(false)
+      })
+  }, [])
+
+  const filtered = useMemo(() => {
+    return rawData.filter(row => {
+      if (filters.workshopType && row['請選擇這場工作坊的類別'] !== filters.workshopType) return false
+      if (filters.smallC && row['所屬小C'] !== filters.smallC) return false
+      if (filters.rank && row['目前聘階'] !== filters.rank) return false
+      if (filters.role && row['參與者身分'] !== filters.role) return false
+      if (filters.dateRange !== 'all') {
+        const dateStr = row['參與工作坊日期']
+        if (!dateStr) return false
+        const date = new Date(dateStr)
+        const now = new Date()
+        if (filters.dateRange === '30') { if ((now - date) > 30 * 86400000) return false }
+        else if (filters.dateRange === '90') { if ((now - date) > 90 * 86400000) return false }
+        else if (filters.dateRange === '180') { if ((now - date) > 180 * 86400000) return false }
+      }
+      return true
+    })
+  }, [rawData, filters])
+
+  const workshopTypes = useMemo(() => Array.from(new Set(rawData.map(r => r['請選擇這場工作坊的類別']).filter(Boolean)).values()).sort(), [rawData])
+  const smallCs = useMemo(() => Array.from(new Set(rawData.map(r => r['所屬小C']).filter(Boolean)).values()).sort(), [rawData])
+  const ranks = useMemo(() => Array.from(new Set(rawData.map(r => r['目前聘階']).filter(Boolean)).values()).sort(), [rawData])
+  const roles = useMemo(() => Array.from(new Set(rawData.map(r => r['參與者身分']).filter(Boolean)).values()).sort(), [rawData])
+
+  const totalRecords = filtered.length
+  const uniquePersons = useMemo(() => new Set(filtered.map(r => r['夥伴姓'] + r['名字'])).size, [filtered])
+  const workshopDates = useMemo(() => new Set(filtered.map(r => r['參與工作坊日期']).filter(Boolean)).size, [filtered])
+  const repeatRate = totalRecords > 0 && uniquePersons > 0 ? ((totalRecords / uniquePersons - 1) * 100).toFixed(1) + '%' : '0%'
+
+  const monthlyData = useMemo(() => {
+    const map = {}
+    filtered.forEach(r => {
+      const d = r['參與工作坊日期']
+      if (!d) return
+      const m = d.substring(0, 7)
+      map[m] = (map[m] || 0) + 1
+    })
+    const sorted = Object.keys(map).sort()
+    return {
+      labels: sorted,
+      datasets: [{ label: '參與人次', data: sorted.map(k => map[k]), backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 6 }]
+    }
+  }, [filtered])
+
+  const workshopTypeData = useMemo(() => {
+    const map = {}
+    filtered.forEach(r => {
+      const t = r['請選擇這場工作坊的類別'] || '未知'
+      map[t] = (map[t] || 0) + 1
+    })
+    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
+    return {
+      labels: sorted.map(([k]) => k),
+      datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: sorted.map(([k]) => WORKSHOP_COLORS[k] || '#94a3b8'), borderWidth: 0 }]
+    }
+  }, [filtered])
+
+  const smallCData = useMemo(() => {
+    const map = {}
+    filtered.forEach(r => {
+      const c = r['所屬小C'] || '未知'
+      map[c] = (map[c] || 0) + 1
+    })
+    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10)
+    return {
+      labels: sorted.map(([k]) => k),
+      datasets: [{ label: '參與人次', data: sorted.map(([, v]) => v), backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 6 }]
+    }
+  }, [filtered])
+
+  const topAttendeesData = useMemo(() => {
+    const map = {}
+    filtered.forEach(r => {
+      const name = (r['夥伴姓'] || '') + (r['名字'] || '')
+      if (!name) return
+      map[name] = (map[name] || 0) + 1
+    })
+    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10)
+    return {
+      labels: sorted.map(([k]) => k),
+      datasets: [{ label: '參加次數', data: sorted.map(([, v]) => v), backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 6 }]
+    }
+  }, [filtered])
+
+  const rankData = useMemo(() => {
+    const map = {}
+    filtered.forEach(r => {
+      const t = r['目前聘階'] || '未知'
+      map[t] = (map[t] || 0) + 1
+    })
+    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
+    return {
+      labels: sorted.map(([k]) => k),
+      datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: sorted.map(([k]) => RANK_COLORS[k] || '#94a3b8'), borderWidth: 0 }]
+    }
+  }, [filtered])
+
+  const roleData = useMemo(() => {
+    const map = {}
+    filtered.forEach(r => {
+      const t = r['參與者身分'] || '未知'
+      map[t] = (map[t] || 0) + 1
+    })
+    const sorted = Object.entries(map).sort((a, b) => b[1] - a[1])
+    return {
+      labels: sorted.map(([k]) => k),
+      datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899'], borderWidth: 0 }]
+    }
+  }, [filtered])
+
+  const recentSessions = useMemo(() => {
+    const map = {}
+    filtered.forEach(r => {
+      const d = r['參與工作坊日期']
+      const t = r['請選擇這場工作坊的類別'] || ''
+      if (!d) return
+      if (!map[d] || map[d].type !== t) { map[d] = { date: d, type: t, count: 0, names: [] } }
+      map[d].count++
+      const name = (r['夥伴姓'] || '') + (r['名字'] || '')
+      if (name) map[d].names.push(name)
+    })
+    return Object.values(map).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10)
+  }, [filtered])
+
+  const chartOptions = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+  }
+
+  const doughnutOptions = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } }
+  }
+
+  const clearFilters = () => setFilters({ workshopType: '', smallC: '', rank: '', role: '', dateRange: 'all' })
+  const hasActiveFilters = Object.values(filters).some(v => v !== '' && v !== 'all')
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="text-4xl mb-3">📊</div>
+          <p className="text-gray-500">正在載入工作坊資料...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-700 flex items-center gap-2">🔍 篩選器</h2>
+          {hasActiveFilters && (
+            <button onClick={clearFilters} className="text-xs text-indigo-600 hover:underline">清除所有篩選</button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <SelectFilter label="工作坊類別" options={workshopTypes} value={filters.workshopType} onChange={v => setFilters(f => ({ ...f, workshopType: v }))} />
+          <SelectFilter label="所屬小C" options={smallCs} value={filters.smallC} onChange={v => setFilters(f => ({ ...f, smallC: v }))} />
+          <SelectFilter label="職級" options={ranks} value={filters.rank} onChange={v => setFilters(f => ({ ...f, rank: v }))} />
+          <SelectFilter label="參與角色" options={roles} value={filters.role} onChange={v => setFilters(f => ({ ...f, role: v }))} />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500">時間範圍</label>
+            <select
+              value={filters.dateRange}
+              onChange={e => setFilters(f => ({ ...f, dateRange: e.target.value }))}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option value="all">全部時間</option>
+              <option value="30">最近 30 天</option>
+              <option value="90">最近 90 天</option>
+              <option value="180">最近 180 天</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <KPICard title="📝 總參與人次" value={totalRecords} sub="篩選後" color="#6366f1" />
+        <KPICard title="👥 獨立人數" value={uniquePersons} sub="不重複計算" color="#10b981" />
+        <KPICard title="📅 舉辦場次" value={workshopDates} sub="不同日期" color="#f59e0b" />
+        <KPICard title="🔄 複訓率" value={repeatRate} sub="人均參加次數" color="#ec4899" />
+      </div>
+
+      {/* Charts Row 1 */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-700 mb-4">📈 月份參與趨勢</h3>
+          <div className="h-52">
+            {monthlyData.labels.length > 0
+              ? <Bar data={monthlyData} options={chartOptions} />
+              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-700 mb-4">🥧 工作坊類別分布</h3>
+          <div className="h-52">
+            {workshopTypeData.labels.length > 0
+              ? <Doughnut data={workshopTypeData} options={doughnutOptions} />
+              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-700 mb-4">🏠 小C參與排行 TOP10</h3>
+          <div className="h-52">
+            {smallCData.labels.length > 0
+              ? <Bar data={smallCData} options={chartOptions} />
+              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-700 mb-4">⭐ 出席王 TOP10</h3>
+          <div className="h-52">
+            {topAttendeesData.labels.length > 0
+              ? <Bar data={topAttendeesData} options={chartOptions} />
+              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row 3 */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-700 mb-4">🏆 職級分布</h3>
+          <div className="h-52">
+            {rankData.labels.length > 0
+              ? <Doughnut data={rankData} options={doughnutOptions} />
+              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-700 mb-4">🎭 角色分布</h3>
+          <div className="h-52">
+            {roleData.labels.length > 0
+              ? <Doughnut data={roleData} options={doughnutOptions} />
+              : <p className="text-gray-400 text-sm text-center py-16">暫無資料</p>}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
+          <h3 className="font-semibold text-gray-700 mb-4">📋 最近場次</h3>
+          <div className="overflow-y-auto h-52 space-y-2">
+            {recentSessions.map((s, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs border-b border-gray-50 pb-2">
+                <span className="bg-indigo-100 text-indigo-700 rounded px-1.5 py-0.5 font-medium whitespace-nowrap">{s.date}</span>
+                <span className="text-gray-600 whitespace-nowrap">{s.type}</span>
+                <span className="text-gray-400 ml-auto">{s.count}人</span>
+              </div>
+            ))}
+            {recentSessions.length === 0 && <p className="text-gray-400 text-xs text-center py-8">暫無資料</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer note */}
+      <div className="text-center text-xs text-gray-400">
+        <p>📌 工作坊資料：Google 試算表（每次開啟自動抓最新）| 秋霞大C教育組</p>
+        <p className="mt-1">篩選不改變原始資料，僅影響本頁顯示範圍 · 最後更新：{lastUpdated}</p>
+      </div>
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════
+//  主程式：頂層雙儀表板導航
+// ════════════════════════════════════════════════════════════════
+
+// ─── 韋宏大C 出席儀表板（子分頁） ────────────────────────────────
+function WeiHongDashboard() {
   const [activeTab, setActiveTab] = useState('single')
   const [dates, setDates] = useState([])
   const [selectedDate, setSelectedDate] = useState('')
@@ -548,18 +874,12 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const compPeriodRef = useRef(compPeriod)
 
-  // Keep ref in sync with state
   useEffect(() => { compPeriodRef.current = compPeriod }, [compPeriod])
 
-  // ── Auto-refresh: countdown timer ──────────────────────────────
   useEffect(() => {
     const tick = setInterval(() => {
       setCountdown(c => {
-        if (c <= 1) {
-          // Time's up — trigger refresh
-          handleRefresh()
-          return AUTO_REFRESH_INTERVAL / 1000
-        }
+        if (c <= 1) { handleRefresh(); return AUTO_REFRESH_INTERVAL / 1000 }
         return c - 1
       })
     }, 1000)
@@ -621,7 +941,7 @@ export default function App() {
     return fetchTrend(start, end)
   }
 
-  // ── Initial load ────────────────────────────────────────────────
+  // Initial load
   useEffect(() => {
     fetchDates()
       .then(d => {
@@ -634,7 +954,6 @@ export default function App() {
       .catch(console.error)
   }, [])
 
-  // Load single meeting data
   useEffect(() => {
     if (!selectedDate) return
     setLoadingSingle(true)
@@ -643,10 +962,7 @@ export default function App() {
       .catch(e => { console.error(e); setLoadingSingle(false); })
   }, [selectedDate])
 
-  // Load comparison data on mount
-  useEffect(() => {
-    fetchComp('week')
-  }, [])
+  useEffect(() => { fetchComp('week') }, [])
 
   function fetchComp(period) {
     setLoadingComp(true)
@@ -672,14 +988,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-5 py-5">
+    <div className="space-y-5">
+      {/* Section header */}
+      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-5 py-4 rounded-2xl">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-black flex items-center gap-2 mb-1">
-              🌸 秋霞大C 出席儀表板
-            </h1>
+            <h2 className="text-lg font-black flex items-center gap-2 mb-0.5">🌸 韋宏大C 出席儀表板</h2>
             <p className="text-blue-200 text-xs">即時分析 Coring 會議狀況</p>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -693,53 +1007,73 @@ export default function App() {
             </button>
             {lastUpdated && (
               <div className="text-right">
-                <div className="text-blue-200 text-xs">
-                  {lastUpdated.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 更新
-                </div>
-                <div className="text-blue-300 text-xs mt-0.5">
-                  ⏱ {countdown}s 後自動刷新
-                </div>
+                <div className="text-blue-200 text-xs">{lastUpdated.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 更新</div>
+                <div className="text-blue-300 text-xs mt-0.5">⏱ {countdown}s 後自動刷新</div>
               </div>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-2xl p-1.5 shadow-sm flex gap-1">
+        <TabBtn id="single" label="單次會議" icon="📅" active={activeTab === 'single'} onClick={() => setActiveTab('single')} />
+        <TabBtn id="trend" label="趨勢分析" icon="📈" active={activeTab === 'trend'} onClick={() => setActiveTab('trend')} />
+        <TabBtn id="history" label="歷史統計" icon="📊" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'single' && (
+        <SingleTab dates={dates} selectedDate={selectedDate} onDateChange={setSelectedDate} data={singleData} loading={loadingSingle} />
+      )}
+      {activeTab === 'trend' && (
+        <TrendTab data={trendData} loading={loadingTrend} onQuery={handleTrendQuery} trendPeriod={trendPeriod} onPeriodChange={handlePeriodChange} />
+      )}
+      {activeTab === 'history' && (
+        <ComparisonTab data={compData} loading={loadingComp} onPeriodChange={p => { setCompPeriod(p); fetchComp(p); }} activePeriod={compPeriod} />
+      )}
+    </div>
+  )
+}
+
+// ─── 主 App：頂層導航 ─────────────────────────────────────────────
+export default function App() {
+  const [topSection, setTopSection] = useState('weihong') // 'weihong' | 'workshop'
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-12">
+      {/* Global Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-3">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-2xl">🌸</span>
+            <div>
+              <h1 className="text-base font-black text-gray-900">秋霞大C 教育組</h1>
+              <p className="text-xs text-gray-400">數據儀表板</p>
+            </div>
+          </div>
+          {/* Top navigation */}
+          <div className="flex gap-2">
+            <TopNavBtn
+              label="韋宏大C 出席"
+              icon="📅"
+              active={topSection === 'weihong'}
+              onClick={() => setTopSection('weihong')}
+            />
+            <TopNavBtn
+              label="工作坊統計"
+              icon="🏆"
+              active={topSection === 'workshop'}
+              onClick={() => setTopSection('workshop')}
+            />
+          </div>
+        </div>
       </header>
 
+      {/* Main content */}
       <main className="max-w-5xl mx-auto px-4 py-5">
-        {/* Tabs */}
-        <div className="bg-white rounded-2xl p-1.5 shadow-sm mb-5 flex gap-1">
-          <TabBtn id="single" label="單次會議" icon="📅" active={activeTab === 'single'} onClick={() => setActiveTab('single')} />
-          <TabBtn id="trend" label="趨勢分析" icon="📈" active={activeTab === 'trend'} onClick={() => setActiveTab('trend')} />
-          <TabBtn id="history" label="歷史統計" icon="📊" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
-        </div>
-
-        {/* Tab content */}
-        {activeTab === 'single' && (
-          <SingleTab
-            dates={dates}
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            data={singleData}
-            loading={loadingSingle}
-          />
-        )}
-        {activeTab === 'trend' && (
-          <TrendTab
-            data={trendData}
-            loading={loadingTrend}
-            onQuery={handleTrendQuery}
-            trendPeriod={trendPeriod}
-            onPeriodChange={handlePeriodChange}
-          />
-        )}
-        {activeTab === 'history' && (
-          <ComparisonTab
-            data={compData}
-            loading={loadingComp}
-            onPeriodChange={p => { setCompPeriod(p); fetchComp(p); }}
-            activePeriod={compPeriod}
-          />
-        )}
+        {topSection === 'weihong' && <WeiHongDashboard />}
+        {topSection === 'workshop' && <WorkshopTab />}
       </main>
 
       <footer className="text-center text-xs text-gray-400 py-6">
