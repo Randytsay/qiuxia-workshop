@@ -369,11 +369,24 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
   const lineOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'top', labels: { usePointStyle: true } }, datalabels: { display: false } },
-    scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: { size: 10 }
+        }
+      },
+      datalabels: { display: false }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { beginAtZero: true }
+    },
   }
 
-  const subGroupData = data?.trendData?.subGroupDatasets?.slice(0, 6) || []
+  const subGroupData = data?.trendData?.subGroupDatasets || []
   const subLineData = {
     labels: data?.trendData?.labels?.map(fmtDateShort) || [],
     datasets: subGroupData.map((ds, i) => ({
@@ -382,6 +395,9 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
       borderColor: CHART_COLORS[i % CHART_COLORS.length],
       backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + '15',
       tension: 0.3,
+      borderWidth: 2.5,
+      pointRadius: 3,
+      pointHoverRadius: 5,
     })),
   }
 

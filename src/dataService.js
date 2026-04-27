@@ -32,7 +32,8 @@ export function getDateRange(period) {
 
   switch (period) {
     case 'week':
-      start = new Date(now); start.setDate(now.getDate() - 7)
+      start = new Date(now); start.setDate(now.getDate() - 6)
+      end = new Date(now)
       break
     case 'month':
       start = new Date(y, m, 1); end = new Date(y, m+1, 0)
@@ -186,18 +187,19 @@ export async function fetchTrend(startDate, endDate) {
     subGroupDatasets: [],
   }
 
-  // Optimized Subgroup trends: Pick top 6 subgroups by total attendance
-  const sgCounts = {}
-  data.forEach(r => {
-    if (!sgCounts[r.subgroup]) sgCounts[r.subgroup] = 0
-    sgCounts[r.subgroup]++
+  // Get all subgroups that have data within this filtered range
+  const rangeSgCounts = {}
+  filtered.forEach(r => {
+    if (!rangeSgCounts[r.subgroup]) rangeSgCounts[r.subgroup] = 0
+    rangeSgCounts[r.subgroup]++
   })
-  const topSubgroups = Object.entries(sgCounts)
+  
+  // Sort subgroups by attendance in this range for a better legend order
+  const activeSubgroups = Object.entries(rangeSgCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
     .map(e => e[0])
 
-  for (const sg of topSubgroups) {
+  for (const sg of activeSubgroups) {
     const sgData = filtered.filter(r => r.subgroup === sg)
     const sgByDate = {}
     for (const row of sgData) {
@@ -207,6 +209,8 @@ export async function fetchTrend(startDate, endDate) {
     trendData.subGroupDatasets.push({
       label: sg,
       data: labels.map(d => sgByDate[d] || 0),
+      fill: false,
+      tension: 0.3,
     })
   }
 
@@ -219,20 +223,40 @@ export async function fetchTrend(startDate, endDate) {
 export async function fetchComparison(period) {
   const data = await getAllData()
   const { start: currStart, end: currEnd } = getDateRange(period)
-  
-  // Calculate Previous Period Dates Correctly
-  const cStart = new Date(currStart)
-  const cEnd   = new Date(currEnd)
-  const durationMs = cEnd.getTime() - cStart.getTime()
-  
-  const pEndObj = new Date(cStart)
-  pEndObj.setDate(pEndObj.getDate() - 1)
-  
-  const pStartObj = new Date(pEndObj.getTime() - durationMs)
-  
   const fmt = (d) => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
-  const prevStart = fmt(pStartObj)
-  const prevEnd   = fmt(pEndObj)
+
+  let prevStart, prevEnd
+  const cStart = new Date(currStart)
+  
+  if (period === 'week') {
+    const pEndObj = new Date(cStart)
+    pEndObj.setDate(pEndObj.getDate() - 1)
+    const pStartObj = new Date(pEndObj)
+    pStartObj.setDate(pStartObj.getDate() - 6)
+    prevStart = fmt(pStartObj)
+    prevEnd = fmt(pEndObj)
+  } else if (period === 'month') {
+    const pStartObj = new Date(cStart.getFullYear(), cStart.getMonth() - 1, 1)
+    const pEndObj = new Date(cStart.getFullYear(), cStart.getMonth(), 0)
+    prevStart = fmt(pStartObj)
+    prevEnd = fmt(pEndObj)
+  } else if (period === 'quarter') {
+    const pStartObj = new Date(cStart.getFullYear(), cStart.getMonth() - 3, 1)
+    const pEndObj = new Date(cStart.getFullYear(), cStart.getMonth(), 0)
+    prevStart = fmt(pStartObj)
+    prevEnd = fmt(pEndObj)
+  } else if (period === 'year') {
+    const pStartObj = new Date(cStart.getFullYear() - 1, 0, 1)
+    const pEndObj = new Date(cStart.getFullYear() - 1, 11, 31)
+    prevStart = fmt(pStartObj)
+    prevEnd = fmt(pEndObj)
+  } else {
+    // Fallback for others
+    const pEndObj = new Date(cStart)
+    pEndObj.setDate(pEndObj.getDate() - 1)
+    prevEnd = fmt(pEndObj)
+    prevStart = "2020/01/01" // dummy
+  }
 
   const periodLabel = { week:'本週', month:'本月', quarter:'本季', half:'半年', year:'本年' }[period] || period
   const prevLabel  = { week:'上週', month:'上月', quarter:'上季', half:'上半年', year:'去年' }[period] || '前期'
