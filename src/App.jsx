@@ -354,8 +354,19 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
     { id: 'thisQuarter', label: '本季' },
   ]
 
+  const labels = data?.trendData?.labels || []
+  const isWeekly = data?.trendData?.isWeekly
+
+  const formatLabel = (d) => {
+    if (isWeekly) {
+      const p = d.split('/')
+      return `週 (${parseInt(p[1])}/${parseInt(p[2])})`
+    }
+    return fmtDateShort(d)
+  }
+
   const lineData = data?.trendData ? {
-    labels: data.trendData.labels.map(fmtDateShort),
+    labels: labels.map(formatLabel),
     datasets: data.trendData.datasets.map((ds, i) => ({
       label: ds.label,
       data: ds.data,
@@ -378,7 +389,16 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
           font: { size: 10 }
         }
       },
-      datalabels: { display: false }
+      datalabels: { display: false },
+      tooltip: {
+        callbacks: {
+          title: (items) => {
+            const idx = items[0].dataIndex
+            const rawLabel = labels[idx]
+            return isWeekly ? `${rawLabel} 當週` : rawLabel
+          }
+        }
+      }
     },
     scales: {
       x: { grid: { display: false } },
@@ -388,7 +408,7 @@ function TrendTab({ data, loading, onQuery, trendPeriod, onPeriodChange }) {
 
   const subGroupData = data?.trendData?.subGroupDatasets || []
   const subLineData = {
-    labels: data?.trendData?.labels?.map(fmtDateShort) || [],
+    labels: labels.map(formatLabel),
     datasets: subGroupData.map((ds, i) => ({
       label: ds.label,
       data: ds.data,

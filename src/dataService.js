@@ -24,6 +24,22 @@ export function normalizeDateStr(raw) {
   return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
 }
 
+function getWeekKey(dateStr) {
+  const d = new Date(dateStr.replace(/\//g, '-'))
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Start from Monday
+  const monday = new Date(d.setDate(diff))
+  return `${monday.getFullYear()}/W${String(Math.ceil(monday.getDate() / 7)).padStart(2,'0')} (${monday.getMonth()+1}/${monday.getDate()})`
+}
+
+function getMonday(dateStr) {
+  const d = new Date(dateStr.replace(/\//g, '-'))
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  const monday = new Date(d.setDate(diff))
+  return `${monday.getFullYear()}/${String(monday.getMonth()+1).padStart(2,'0')}/${String(monday.getDate()).padStart(2,'0')}`
+}
+
 export function getDateRange(period) {
   const now = new Date()
   const y = now.getFullYear()
@@ -165,24 +181,46 @@ export async function fetchTrend(startDate, endDate) {
   const filtered = data.filter(r => r.date >= start && r.date <= end)
     .sort((a, b) => a.date.localeCompare(b.date))
 
-  // Group by date
-  const byDate = {}
+  // Determine granularity: if > 14 days, group by week
+  const sObj = new Date(start.replace(/\//g, '-'))
+  const eObj = new Date(end.replace(/\//g, '-'))
+  const durationDays = (eObj - sObj) / (1000 * 3600 * 24)
+  const useWeekly = durationDays > 14
+
+  const byKey = {}
+  const getKey = (dateStr) => useWeekly ? getMonday(dateStr) : dateStr
+
+  // Pre-calculate aggregate data
   for (const row of filtered) {
-    if (!byDate[row.date]) byDate[row.date] = { partners: 0, newFriends: 0 }
-    byDate[row.date].partners++
-    byDate[row.date].newFriends += row.newFriends
+    const key = getKey(row.date)
+    if (!byKey[key]) byKey[key] = { partners: 0, newFriends: 0 }
+    byKey[key].partners++
+    byKey[key].newFriends += row.newFriends
   }
 
-  const labels = Object.keys(byDate).sort()
+  // Generate full range of labels
+  const labels = []
+  const curr = new Date(sObj)
+  while (curr <= eObj) {
+    const dStr = `${curr.getFullYear()}/${String(curr.getMonth()+1).padStart(2,'0')}/${String(curr.getDate()).padStart(2,'0')}`
+    const key = getKey(dStr)
+    if (!labels.includes(key)) labels.push(key)
+    
+    if (useWeekly) curr.setDate(curr.getDate() + 7)
+    else curr.setDate(curr.getDate() + 1)
+  }
+  labels.sort()
+
   const totalPartners = filtered.length
   const totalNewFriends = filtered.reduce((s, r) => s + r.newFriends, 0)
 
   const trendData = {
     labels,
+    isWeekly: useWeekly,
     datasets: [
-      { label: '總出席', data: labels.map(d => byDate[d].partners + byDate[d].newFriends), fill: true },
-      { label: '夥伴',   data: labels.map(d => byDate[d].partners), fill: false },
-      { label: '新朋友', data: labels.map(d => byDate[d].newFriends), fill: false },
+      { label: '總出席', data: labels.map(d => (byKey[d]?.partners || 0) + (byKey[d]?.newFriends || 0)), fill: true },
+      { label: '夥伴',   data: labels.map(d => byKey[d]?.partners || 0), fill: false },
+      { label: '新朋友', data: labels.map(d => byKey[d]?.newFriends || 0), fill: false },
     ],
     subGroupDatasets: [],
   }
@@ -194,21 +232,21 @@ export async function fetchTrend(startDate, endDate) {
     rangeSgCounts[r.subgroup]++
   })
   
-  // Sort subgroups by attendance in this range for a better legend order
   const activeSubgroups = Object.entries(rangeSgCounts)
     .sort((a, b) => b[1] - a[1])
     .map(e => e[0])
 
   for (const sg of activeSubgroups) {
     const sgData = filtered.filter(r => r.subgroup === sg)
-    const sgByDate = {}
+    const sgByKey = {}
     for (const row of sgData) {
-      if (!sgByDate[row.date]) sgByDate[row.date] = 0
-      sgByDate[row.date]++
+      const key = getKey(row.date)
+      if (!sgByKey[key]) sgByKey[key] = 0
+      sgByKey[key]++
     }
     trendData.subGroupDatasets.push({
       label: sg,
-      data: labels.map(d => sgByDate[d] || 0),
+      data: labels.map(d => sgByKey[d] || 0),
       fill: false,
       tension: 0.3,
     })
