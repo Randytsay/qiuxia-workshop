@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 頂級數據儀表板開發全攻略 - 從零到一完整部署</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --accent: #10b981;
+            --bg: #0f172a;
+        }
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: var(--bg);
+            color: #f1f5f9;
+            scroll-behavior: smooth;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #818cf8 0%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .step-number {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        }
+        pre {
+            background: #020617 !important;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+        code { color: #fbbf24; }
+        .comment { color: #64748b; font-style: italic; }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .section-card { transition: all 0.3s ease; }
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+        .nav-link { position: relative; }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+        .nav-link:hover::after { width: 100%; }
+        .sidebar-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #334155;
+            transition: all 0.3s;
+        }
+        .sidebar-dot.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+            border-left: 4px solid var(--primary);
+        }
+    </style>
+</head>
+<body class="selection:bg-indigo-500 selection:text-white">
+
+    <!-- Sticky Navigation Bar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5 py-4">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 step-number rounded-lg flex items-center justify-center font-bold">26</div>
+                <span class="font-black text-xl tracking-tighter">QIUXIA <span class="gradient-text">WORKSHOP</span></span>
+            </div>
+            <div class="hidden lg:flex gap-8 text-sm font-semibold text-slate-300">
+                <a href="#prep" class="nav-link">帳號準備</a>
+                <a href="#sheets" class="nav-link">試算表設定</a>
+                <a href="#code" class="nav-link">開發邏輯</a>
+                <a href="#deploy" class="nav-link">部署上線</a>
+            </div>
+            <a href="https://github.com" target="_blank" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20">
+                立即開始
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+        <div class="absolute inset-0 z-0">
+            <div class="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-600/20 rounded-full blur-[120px]"></div>
+            <div class="absolute bottom-1/4 -right-20 w-96 h-96 bg-pink-600/20 rounded-full blur-[120px]"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-20 pointer-events-none" 
+                 style="background-image: radial-gradient(#6366f1 1px, transparent 1px); background-size: 40px 40px;"></div>
+        </div>
+        
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="flex flex-col lg:flex-row items-center gap-12">
+                <div class="lg:w-1/2 text-center lg:text-left">
+                    <div class="inline-block px-4 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-sm font-semibold mb-6">
+                        ✨ 2026 年度旗艦級教學
+                    </div>
+                    <h1 class="text-6xl lg:text-8xl font-black mb-6 leading-tight">
+                        手把手教你<br>
+                        <span class="gradient-text">架設儀表板</span>
+                    </h1>
+                    <p class="text-xl text-slate-400 mb-10 max-w-2xl leading-relaxed">
+                        這不只是一份教學，而是一套完整的解決方案。我們將帶領你從註冊第一個帳號開始，
+                        直到擁有一份能夠自動同步 Google 試算表、具備動態圖表與專業設計的企業級儀表板。
+                    </p>
+                    <div class="flex flex-wrap justify-center lg:justify-start gap-4">
+                        <a href="#prep" class="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-all shadow-xl shadow-indigo-500/30">
+                            立刻動手做
+                        </a>
+                        <div class="flex items-center gap-3 px-6 py-4 glass rounded-2xl">
+                            <i data-lucide="clock" class="text-amber-400 w-5 h-5"></i>
+                            <span class="text-sm font-semibold">預計完成時間：30 分鐘</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:w-1/2 animate-float">
+                    <div class="relative">
+                        <div class="absolute -inset-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-[2.5rem] blur-2xl opacity-20"></div>
+                        <img src="./tutorial_hero_1777351224976.png" alt="Tutorial Hero" class="relative rounded-3xl shadow-2xl border border-white/10 w-full">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Phase 0: Prep -->
+    <section id="prep" class="py-24">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20">
+                <h2 class="text-4xl lg:text-5xl font-black mb-4">階段 0：帳號與工具準備</h2>
+                <p class="text-slate-400">在開始寫程式之前，我們需要準備好基礎設施。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <!-- Google Account -->
+                <div class="glass p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i data-lucide="mail" class="w-24 h-24"></i>
+                    </div>
+                    <div class="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="chrome" class="text-blue-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4 text-white">1. Google 帳號</h3>
+                    <p class="text-slate-400 text-sm mb-6 leading-relaxed">用於存取 Google Sheets。如果你已經有 Gmail，這步就完成了。</p>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="text-accent w-4 h-4 mt-0.5"></i> 進入 <a href="https://sheets.google.com" class="text-blue-400 underline">Google Sheets</a></li>
+                        <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="text-accent w-4 h-4 mt-0.5"></i> 確保能夠建立新的試算表</li>
+                    </ul>
+                </div>
+
+                <!-- GitHub Account -->
+                <div class="glass p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i data-lucide="github" class="w-24 h-24"></i>
+                    </div>
+                    <div class="w-14 h-14 bg-slate-500/20 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="github" class="text-slate-100"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4 text-white">2. GitHub 帳號</h3>
+                    <p class="text-slate-400 text-sm mb-6 leading-relaxed">這是工程師存放程式碼的地方，也是我們網站的後台基地。</p>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="text-accent w-4 h-4 mt-0.5"></i> 前往 <a href="https://github.com/signup" class="text-blue-400 underline">GitHub 註冊頁面</a></li>
+                        <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="text-accent w-4 h-4 mt-0.5"></i> 點擊 Sign up 並輸入 Email</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="text-accent w-4 h-4 mt-0.5"></i> 通過驗證（通常是旋轉圖片）</li>
+                    </ul>
+                </div>
+
+                <!-- Vercel Account -->
+                <div class="glass p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i data-lucide="zap" class="w-24 h-24"></i>
+                    </div>
+                    <div class="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="cloud" class="text-indigo-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4 text-white">3. Vercel 帳號</h3>
+                    <p class="text-slate-400 text-sm mb-6 leading-relaxed">它負責把 GitHub 的程式碼轉化為真正的網址，完全免費且快速。</p>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="text-accent w-4 h-4 mt-0.5"></i> 前往 <a href="https://vercel.com/signup" class="text-blue-400 underline">Vercel 註冊頁面</a></li>
+                        <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="text-accent w-4 h-4 mt-0.5"></i> 選擇 <strong>Continue with GitHub</strong>（最推薦）</li>
+                        <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="text-accent w-4 h-4 mt-0.5"></i> 點擊授權即可完成綁定</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Phase 1: Sheets -->
+    <section id="sheets" class="py-24 bg-slate-900/40">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col lg:flex-row gap-16 items-start">
+                <div class="lg:w-1/3 sticky top-32">
+                    <div class="w-16 h-16 step-number rounded-3xl flex items-center justify-center font-black text-2xl mb-8">1</div>
+                    <h2 class="text-4xl font-bold mb-6 text-white">Google 試算表<br>詳細設定</h2>
+                    <p class="text-slate-400 leading-relaxed mb-8">
+                        這是你的「資料庫」。小白最常失敗的地方在於<strong>權限設定</strong>。請務必跟著以下步驟操作。
+                    </p>
+                    <div class="highlight-box p-6 rounded-2xl">
+                        <h4 class="font-bold text-indigo-400 mb-2 italic">⚠️ 核心原理 ⚠️</h4>
+                        <p class="text-xs text-slate-400 leading-normal">
+                            我們不使用複雜的 Google API 授權，而是利用「公開發布」產生的 <strong>CSV URL</strong>。
+                            這可以繞過繁瑣的登入流程，讓網頁直接讀取純文字數據。
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="lg:w-2/3 space-y-10">
+                    <!-- Step Detail 1 -->
+                    <div class="glass p-8 rounded-3xl border border-white/5">
+                        <h4 class="text-xl font-bold mb-4 flex items-center gap-3">
+                            <span class="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-sm">A</span>
+                            建立正確的資料格式
+                        </h4>
+                        <p class="text-slate-400 mb-6">
+                            試算表的第一列（Header）必須乾淨，不要有空格或特殊符號。
+                        </p>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-white/10 font-mono text-sm">
+                            <table class="w-full text-left">
+                                <tr class="text-indigo-400 border-b border-white/10"><th class="pb-2">日期</th><th class="pb-2">姓名</th><th class="pb-2">區域</th><th class="pb-2">出席狀態</th></tr>
+                                <tr><td class="pt-2">2026/01/01</td><td class="pt-2">張小明</td><td class="pt-2">台北</td><td class="pt-2">已簽到</td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Step Detail 2 -->
+                    <div class="glass p-8 rounded-3xl border border-white/5">
+                        <h4 class="text-xl font-bold mb-4 flex items-center gap-3">
+                            <span class="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-sm">B</span>
+                            發布至網路（關鍵步驟）
+                        </h4>
+                        <ol class="space-y-4 text-slate-400 text-sm">
+                            <li class="flex gap-4">
+                                <span class="text-indigo-400 font-bold">Step 1.</span>
+                                <span>點擊左上角 <strong>[檔案]</strong> → <strong>[共用]</strong> → <strong>[發布到網路]</strong>。</span>
+                            </li>
+                            <li class="flex gap-4">
+                                <span class="text-indigo-400 font-bold">Step 2.</span>
+                                <span>在彈窗中，第一個下拉選單選擇「整份文件」或「特定工作表」。</span>
+                            </li>
+                            <li class="flex gap-4">
+                                <span class="text-indigo-400 font-bold">Step 3.</span>
+                                <span><strong>重要：</strong>第二個下拉選單務必選擇 <strong>「逗號分隔值 (.csv)」</strong>。</span>
+                            </li>
+                            <li class="flex gap-4">
+                                <span class="text-indigo-400 font-bold">Step 4.</span>
+                                <span>點擊藍色的「發布」按鈕，並複製產生的連結（這就是你的 API URL）。</span>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <div class="bg-amber-500/10 border border-amber-500/20 p-6 rounded-3xl flex gap-4">
+                        <i data-lucide="alert-triangle" class="text-amber-500 w-6 h-6 flex-shrink-0"></i>
+                        <div>
+                            <h5 class="text-amber-400 font-bold mb-1">小提示</h5>
+                            <p class="text-xs text-slate-400">
+                                如果你更新了試算表的內容，通常需要等 1-5 分鐘，Google 才會同步更新 CSV 連結的內容。這不是你的程式壞掉囉！
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Phase 2: Code -->
+    <section id="code" class="py-24">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col lg:flex-row-reverse gap-16 items-start">
+                <div class="lg:w-1/3 sticky top-32">
+                    <div class="w-16 h-16 step-number rounded-3xl flex items-center justify-center font-black text-2xl mb-8">2</div>
+                    <h2 class="text-4xl font-bold mb-6 text-white">開發邏輯與<br>原理解析</h2>
+                    <p class="text-slate-400 leading-relaxed mb-8">
+                        不需要安裝任何開發軟體，只要一個記事本或線上編輯器就能完成。我們將解釋每一行程式碼的意義。
+                    </p>
+                </div>
+                
+                <div class="lg:w-2/3 space-y-10">
+                    <div class="glass p-8 rounded-3xl border border-white/5">
+                        <h4 class="text-xl font-bold mb-4">A. 核心 HTML 結構</h4>
+                        <p class="text-sm text-slate-400 mb-4">我們只需要三個部分：圖表容器、數據抓取腳本、圖表展示腳本。</p>
+                        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;!-- 引入 ECharts 圖表庫 --&gt;
+    &lt;script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;!-- 這是一個空的畫布，圖表會畫在這裡 --&gt;
+    &lt;div id="chart-main" style="width: 100%; height: 500px;"&gt;&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+                    </div>
+
+                    <div class="glass p-8 rounded-3xl border border-white/5">
+                        <h4 class="text-xl font-bold mb-4">B. 資料解析 JS (小白必讀)</h4>
+                        <p class="text-sm text-slate-400 mb-4">這段程式碼的功能是把「一長串文字」變成電腦看得懂的「一組組物件」。</p>
+                        <pre><code>async function fetchData() {
+    <span class="comment">// 1. 抓取剛剛複製的 CSV 連結</span>
+    const response = await fetch('你的_CSV_連結');
+    const text = await response.text();
+
+    <span class="comment">// 2. 將每一列切割開來</span>
+    const rows = text.split('\n');
+    
+    <span class="comment">// 3. 處理表頭 (第一列)</span>
+    const headers = rows[0].split(',');
+
+    <span class="comment">// 4. 組裝資料</span>
+    const cleanData = rows.slice(1).map(row => {
+        const cols = row.split(',');
+        return {
+            date: cols[0], <span class="comment">// 假設第一欄是日期</span>
+            value: Number(cols[1]) <span class="comment">// 假設第二欄是數值</span>
+        };
+    });
+    
+    renderChart(cleanData);
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Phase 3: Deploy -->
+    <section id="deploy" class="py-24 bg-indigo-900/10">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20">
+                <h2 class="text-4xl lg:text-5xl font-black mb-4">階段 3：GitHub 與 Vercel 部署</h2>
+                <p class="text-slate-400">最後一里路：把檔案發布到網路上，全世界都能看到。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <!-- GitHub Part -->
+                <div class="glass p-10 rounded-[2.5rem] border border-white/5 relative">
+                    <div class="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center font-bold mb-6">A</div>
+                    <h3 class="text-2xl font-bold mb-6 text-white">上傳程式碼至 GitHub</h3>
+                    <div class="space-y-6 text-sm text-slate-400">
+                        <div class="flex gap-4">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">1</span>
+                            <p>點擊 GitHub 頁面右上角 <strong>[+]</strong> → <strong>[New repository]</strong>。</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">2</span>
+                            <p>Repository name 輸入 <code>my-dashboard</code>。設為 <strong>Public</strong>。</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">3</span>
+                            <p>建立後，在頁面中央找到 <strong>"uploading an existing file"</strong> 並點擊。</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">4</span>
+                            <p>將你的 <code>index.html</code> 拖進去，點擊 <strong>[Commit changes]</strong>。完成！</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vercel Part -->
+                <div class="glass p-10 rounded-[2.5rem] border border-white/5 relative">
+                    <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center font-bold mb-6 text-white">B</div>
+                    <h3 class="text-2xl font-bold mb-6 text-white">連結 Vercel 部署網址</h3>
+                    <div class="space-y-6 text-sm text-slate-400">
+                        <div class="flex gap-4">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">1</span>
+                            <p>在 Vercel 後台點擊 <strong>[Add New]</strong> → <strong>[Project]</strong>。</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">2</span>
+                            <p>找到剛建立的 <code>my-dashboard</code> 儲存庫，點擊 <strong>[Import]</strong>。</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">3</span>
+                            <p>直接點擊藍色的 <strong>[Deploy]</strong> 按鈕（無需更改任何設定）。</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">4</span>
+                            <p><strong>恭喜！</strong> Vercel 會給你一個網址，例如 <code>my-dashboard.vercel.app</code>。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ & Final Words -->
+    <section class="py-24 border-t border-white/5">
+        <div class="container mx-auto px-6">
+            <div class="max-w-3xl mx-auto glass p-12 rounded-[3rem] border border-white/10 text-center">
+                <div class="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-8">
+                    <i data-lucide="party-popper" class="text-indigo-400 w-10 h-10"></i>
+                </div>
+                <h2 class="text-3xl font-bold mb-6">你已經掌握了現代網頁開發的真諦</h2>
+                <p class="text-slate-400 leading-relaxed mb-10">
+                    在 2026 年，開發不再僅僅是寫程式，更多的是關於<strong>系統串接與自動化</strong>。
+                    透過 Google Sheets 作為大腦，GitHub 作為心臟，Vercel 作為門面，你已經建立了強大的數位化基礎設施。
+                </p>
+                <div class="flex flex-col md:flex-row gap-4 justify-center">
+                    <div class="px-6 py-4 bg-slate-800/50 rounded-2xl border border-white/5">
+                        <p class="text-xs text-slate-500 uppercase tracking-widest mb-1">下一步</p>
+                        <p class="font-bold">嘗試加入更多圖表</p>
+                    </div>
+                    <div class="px-6 py-4 bg-slate-800/50 rounded-2xl border border-white/5">
+                        <p class="text-xs text-slate-500 uppercase tracking-widest mb-1">進階建議</p>
+                        <p class="font-bold">使用 React 框架開發</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 border-t border-white/5">
+        <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p class="text-slate-500 text-sm">
+                © 2026 Randy
+            </p>
+            <div class="flex gap-6 text-slate-500">
+                <a href="#" class="hover:text-white transition-colors">Privacy</a>
+                <a href="#" class="hover:text-white transition-colors">Terms</a>
+                <a href="#" class="hover:text-white transition-colors">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
